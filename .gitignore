@@ -1,0 +1,9 @@
+# Build
+/target
+
+# Libs should not include lock
+Cargo.lock
+
+# IDEs
+.idea
+.vscode
