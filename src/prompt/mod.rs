@@ -9,13 +9,12 @@ use crate::key_bindings::{action_for, Action, KeyBindings};
 pub struct Prompt {
     prompt: Option<CharString>,
     bindings: Option<KeyBindings>,
-    completer: Option<String>,
-    suggester: Option<String>,
 }
 
 impl Prompt {
+    #[must_use]
     pub fn new() -> Self {
-        Default::default()
+        Prompt::default()
     }
 
     pub fn prompt(&mut self, prompt: Option<&str>) -> &mut Self {
@@ -28,31 +27,29 @@ impl Prompt {
         self
     }
 
-    pub fn read_line(&self) -> Option<String> {
+    pub fn read_line(&self) -> Result<Option<String>, crate::ErrorKind> {
         let stdout = std::io::stdout();
-        let mut writer = Writer::new(&stdout);
+        let mut writer = Writer::new(&stdout)?;
         let mut buffer = buffer::Buffer::new();
 
         loop {
-            writer.print(&self.prompt, &buffer);
-            match self.next_event() {
+            writer.print(&self.prompt, &buffer)?;
+            match self.next_event()? {
                 Action::Write(c) => buffer.write(c),
                 Action::Delete(scope) => buffer.delete(scope),
                 Action::Move(movement) => buffer.move_cursor(movement),
-                Action::Complete(_) => {}
-                Action::Suggest(_) => {}
+                Action::Complete(_) | Action::Suggest(_) => {}
                 Action::Noop => continue,
-                Action::Accept => return Some(buffer.data()),
-                Action::Cancel => return None,
+                Action::Accept => return Ok(Some(buffer.to_string())),
+                Action::Cancel => return Ok(None),
             }
         }
     }
 
-    fn next_event(&self) -> Action {
-        match crossterm::event::read() {
-            Ok(crossterm::event::Event::Key(e)) => action_for(self.bindings.as_ref(), e),
-            Ok(_) => Action::Noop,
-            Err(_) => Action::Noop,
+    fn next_event(&self) -> Result<Action, crate::ErrorKind> {
+        match crossterm::event::read()? {
+            crossterm::event::Event::Key(e) => Ok(action_for(self.bindings.as_ref(), e)),
+            _ => Ok(Action::Noop),
         }
     }
 }
@@ -62,43 +59,57 @@ impl Default for Prompt {
         Self {
             prompt: None,
             bindings: None,
-            completer: None,
-            suggester: None,
         }
     }
 }
 
 struct Writer<'a> {
     lock: std::io::StdoutLock<'a>,
-    row: u16,
+    _row: u16,
 }
 
 impl<'a> Writer<'a> {
-    fn new(stdout: &'a std::io::Stdout) -> Self {
-        crossterm::terminal::enable_raw_mode();
-        let row = crossterm::cursor::position().map_or(0, |pos| pos.1);
-        Self { lock: stdout.lock(), row }
+    fn new(stdout: &'a std::io::Stdout) -> Result<Self, crate::ErrorKind> {
+        crossterm::terminal::enable_raw_mode()?;
+        Ok(Self {
+            lock: stdout.lock(),
+            _row: crossterm::cursor::position().map(|pos| pos.1)?,
+        })
     }
 
-    fn print(&mut self, prompt: &Option<CharString>, buffer: &buffer::Buffer) {
+    // TODO: Allow long strings
+    #[allow(clippy::cast_possible_truncation)]
+    fn print(
+        &mut self,
+        prompt: &Option<CharString>,
+        buffer: &buffer::Buffer,
+    ) -> Result<(), crate::ErrorKind> {
         use std::io::Write;
 
         crossterm::queue!(
             self.lock,
             crossterm::cursor::MoveToColumn(0),
             crossterm::terminal::Clear(crossterm::terminal::ClearType::CurrentLine),
-        );
+        )?;
 
         let start = if let Some(prompt) = prompt {
-            crossterm::queue!(self.lock, crossterm::style::Print(prompt));
-            prompt.data.len()
-        } else { 0 };
+            crossterm::queue!(self.lock, crossterm::style::Print(prompt))?;
+            prompt.len()
+        } else {
+            0
+        };
 
-        crossterm::execute!(self.lock, crossterm::style::Print(buffer.data()), crossterm::cursor::MoveToColumn((start + buffer.position() + 1) as u16));
+        crossterm::execute!(
+            self.lock,
+            crossterm::style::Print(buffer),
+            crossterm::cursor::MoveToColumn((start + buffer.position() + 1) as u16)
+        )
     }
 }
 
 impl<'a> std::ops::Drop for Writer<'a> {
+    // Allowed because this is a drop and the previous construction already managed the get through
+    #[allow(unused_must_use)]
     fn drop(&mut self) {
         use std::io::Write;
         crossterm::terminal::disable_raw_mode();

@@ -21,7 +21,7 @@ pub enum Action {
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Scope {
-    WholeLina,
+    WholeLine,
     WholeWord,
     Relative(Range),
 }
@@ -86,7 +86,7 @@ fn default_action(event: crossterm::event::KeyEvent) -> Action {
                     'h' => Delete(Relative(Line(Backward))),
                     'l' => Delete(Relative(Line(Forward))),
                     'w' => Delete(WholeWord),
-                    'u' => Delete(WholeLina),
+                    'u' => Delete(WholeLine),
                     _ => Noop,
                 }
             } else if event.modifiers == crossterm::event::KeyModifiers::ALT {
