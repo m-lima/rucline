@@ -3,5 +3,17 @@ name = "rucline"
 version = "0.1.0"
 authors = ["Marcelo Lima <marcelowind@gmail.com>"]
 edition = "2018"
+readme = "README.md"
+keywords = ["cli", "repl", "terminal", "color"]
+repository = "https://github.com/m-lima/rucline"
+categories = ["command-line-interface", "command-line-utilities"]
+description = "Pwner is a Process Owner crate that allows ergonomic access to child processes"
+license = "MIT"
+
+[features]
+default = []
+serialize = [ "serde", "crossterm/serde" ]
 
 [dependencies]
+crossterm = "0.16"
+serde = { version = "1", features = [ "derive" ], optional = true }

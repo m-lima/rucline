@@ -24,11 +24,21 @@ jobs:
         with:
           command: build
           args: --verbose --workspace --all-targets --all-features
+      - name: Build examples
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --verbose --workspace --examples
       - name: Lint
         uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --verbose --workspace --all-targets --all-features
+      - name: Lint examples
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --verbose --workspace --examples
       - name: Test
         uses: actions-rs/cargo@v1
         with:
