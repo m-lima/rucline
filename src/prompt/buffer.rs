@@ -25,10 +25,10 @@ impl Buffer {
         self.position
     }
 
-    #[inline]
-    pub(super) fn at_end(&self) -> bool {
-        self.position == self.chars.len()
-    }
+    // #[inline]
+    // pub(super) fn at_end(&self) -> bool {
+    //     self.position == self.chars.len()
+    // }
 
     #[inline]
     pub(super) fn len(&self) -> usize {

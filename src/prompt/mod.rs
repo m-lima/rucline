@@ -36,27 +36,17 @@ impl Prompt {
 
         writer.print(&buffer)?;
         loop {
-            match crossterm::event::read()? {
-                crossterm::event::Event::Resize(width, _) => writer.resize(width),
-                crossterm::event::Event::Key(e) => match action_for(self.bindings.as_ref(), e) {
-                    Action::Write(c) => {
-                        buffer.write(c);
-                        writer.print(&buffer)?;
-                    }
-                    Action::Delete(scope) => {
-                        buffer.delete(scope);
-                        writer.print(&buffer)?;
-                    }
-                    Action::Move(movement) => {
-                        buffer.move_cursor(movement);
-                        writer.print(&buffer)?;
-                    }
+            if let crossterm::event::Event::Key(e) = crossterm::event::read()? {
+                match action_for(self.bindings.as_ref(), e) {
+                    Action::Write(c) => buffer.write(c),
+                    Action::Delete(scope) => buffer.delete(scope),
+                    Action::Move(movement) => buffer.move_cursor(movement),
                     Action::Complete(_) | Action::Suggest(_) => {}
                     Action::Noop => continue,
                     Action::Accept => return Ok(Some(buffer.to_string())),
                     Action::Cancel => return Ok(None),
-                },
-                _ => continue,
+                }
+                writer.print(&buffer)?;
             }
         }
     }
