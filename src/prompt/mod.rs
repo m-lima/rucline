@@ -35,7 +35,7 @@ impl Prompt {
             writer.print(&self.prompt, &buffer)?;
 
             match crossterm::event::read()? {
-                crossterm::event::Event::Resize(width, heigth) => writer.resize(width, heigth),
+                crossterm::event::Event::Resize(width, heigth) => writer.resize(width, heigth)?,
                 crossterm::event::Event::Key(e) => match action_for(self.bindings.as_ref(), e) {
                     Action::Write(c) => buffer.write(c),
                     Action::Delete(scope) => buffer.delete(scope),
@@ -63,7 +63,7 @@ impl Default for Prompt {
 struct Writer {
     width: u16,
     height: u16,
-    prev_length: usize,
+    prev_lines: u16,
 }
 
 impl Writer {
@@ -73,13 +73,24 @@ impl Writer {
         Ok(Self {
             width,
             height,
-            prev_length: 0,
+            prev_lines: 0,
         })
     }
 
-    fn resize(&mut self, width: u16, height: u16) {
+    fn resize(&mut self, width: u16, height: u16) -> Result<(), crate::ErrorKind> {
         self.width = width;
         self.height = height;
+
+        if self.prev_lines > 0 {
+            use std::io::Write;
+            crossterm::queue!(
+                std::io::stdout(),
+                crossterm::cursor::MoveUp(self.prev_lines),
+            )?;
+            self.prev_lines = 0;
+        }
+
+        Ok(())
     }
 
     // TODO: Allow long strings
@@ -92,23 +103,82 @@ impl Writer {
         use std::io::Write;
         let mut stdout = std::io::stdout();
 
+        if self.prev_lines > 0 {
+            crossterm::queue!(stdout, crossterm::cursor::MoveUp(self.prev_lines),)?;
+        }
+
         crossterm::queue!(
             stdout,
-            crossterm::cursor::MoveTo(0, 20),
+            crossterm::cursor::MoveToColumn(0),
             crossterm::terminal::Clear(crossterm::terminal::ClearType::FromCursorDown),
         )?;
 
-        let start = if let Some(prompt) = prompt {
-            crossterm::queue!(stdout, crossterm::style::Print(&prompt),)?;
-            prompt.len()
-        } else {
-            0
-        };
+        // let (prompt_length, start_position) = prompt.map_or((0,0), |prompt|{
+        //     crossterm::queue!(stdout, crossterm::style::Print(&prompt),)?;
+        //     (prompt.len(), 0)
+        // });
 
-        self.prev_length = start + buffer.len();
+        let mut current_column = 0;
+        let mut lines = 0;
+        if let Some(prompt) = prompt {
+            lines += self.print_multiline(&mut stdout, &prompt, &mut current_column)?;
+        }
 
-        crossterm::execute!(stdout, crossterm::style::Print(buffer),)
+        lines += self.print_multiline(&mut stdout, buffer.chars(), &mut current_column)?;
+        self.prev_lines = lines;
+
+        crossterm::execute!(stdout, crossterm::cursor::MoveToColumn(0))
         // crossterm::cursor::MoveToColumn((start + buffer.position() + 1) as u16)
+    }
+
+    // Allowed because we always cap on width size, which is never larger than u16::max_value
+    // #[allow(clippy::cast_possible_truncation)]
+    fn print_multiline(
+        &self,
+        stdout: &mut impl std::io::Write,
+        string: &[char],
+        current_column: &mut u16,
+    ) -> Result<u16, crate::ErrorKind> {
+        let mut lines = 0;
+        for c in string {
+            if *current_column == self.width {
+            //     let line = crossterm::cursor::position().map(|pos| pos.1)?;
+            //     if line == self.height {
+            //         crossterm::queue!(stdout, crossterm::terminal::ScrollUp(1))?;
+            //     }
+            //     crossterm::queue!(
+            //         stdout,
+            //         crossterm::cursor::MoveDown(1),
+            //         crossterm::cursor::MoveToColumn(0)
+            //     )?;
+                *current_column = 0;
+                lines += 1;
+            }
+
+            crossterm::queue!(stdout, crossterm::style::Print(*c))?;
+            *current_column += 1;
+        }
+        Ok(lines)
+        // let available_width = usize::from(width - *current_column);
+        // let mut lines = 0;
+        // if string.len() < available_width {
+        //     crossterm::queue!(stdout, crossterm::style::Print(&string))?;
+        //     current_column += string.len() as u16;
+        //     Ok(lines)
+        // } else {
+        //     let chunk = &string[0..available_width];
+        //     crossterm::queue!(stdout, crossterm::style::Print(&chunk), crossterm::style::Print('\n'))?;
+        //     lines += 1;
+        //     let chunks = &string[available_width..].chunks_exact(usize::from(width));
+        //     for chunk in chunks {
+        //         crossterm::queue!(stdout, crossterm::style::Print(&chunk), crossterm::style::Print('\n'))?;
+        //         lines += 1;
+        //     }
+        //     let chunk = chunks.remainder();
+        //     current_column = chunk.len();
+        //     crossterm::queue!(stdout, crossterm::style::Print(&chunk))?;
+        //     Ok(lines)
+        // }
     }
 }
 

@@ -20,19 +20,28 @@ impl Buffer {
         Buffer::default()
     }
 
+    #[inline]
     pub(super) fn _position(&self) -> usize {
         self.position
     }
 
-    pub(super) fn len(&self) -> usize {
+    #[inline]
+    pub(super) fn _len(&self) -> usize {
         self.chars.len()
     }
 
+    #[inline]
+    pub(super) fn chars(&self) -> &[char] {
+        &self.chars
+    }
+
+    #[inline]
     pub(super) fn clear(&mut self) {
         self.chars.clear();
         self.position = 0;
     }
 
+    #[inline]
     pub(super) fn write(&mut self, c: char) {
         self.chars.insert(self.position, c);
         self.position += 1;

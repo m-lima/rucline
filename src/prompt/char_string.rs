@@ -11,22 +11,32 @@ impl CharString {
         CharString::default()
     }
 
+    #[inline]
     pub(super) fn len(&self) -> usize {
         self.0.len()
     }
 
+    #[inline]
     pub(super) fn insert(&mut self, index: usize, c: char) {
         self.0.insert(index, c);
     }
 
+    #[inline]
     pub(super) fn clear(&mut self) {
         self.0.clear();
     }
 
+    #[inline]
     pub(super) fn remove(&mut self, index: usize) {
         self.0.remove(index);
     }
 
+    // #[inline]
+    // pub(super) fn chunks_exact(&self, chunk_size: usize) -> std::slice::ChunksExact<'_, char> {
+    //     self.0.chunks_exact(chunk_size)
+    // }
+
+    #[inline]
     pub(super) fn drain<R>(&mut self, range: R)
     where
         R: std::ops::RangeBounds<usize>,
@@ -37,12 +47,14 @@ impl CharString {
 
 impl std::ops::Index<usize> for CharString {
     type Output = char;
+    #[inline]
     fn index(&self, index: usize) -> &Self::Output {
         &self.0[index]
     }
 }
 
 impl std::ops::IndexMut<usize> for CharString {
+    #[inline]
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.0[index]
     }
@@ -51,6 +63,7 @@ impl std::ops::IndexMut<usize> for CharString {
 impl std::ops::Deref for CharString {
     type Target = [char];
 
+    #[inline]
     fn deref(&self) -> &Self::Target {
         &self.0
     }
