@@ -1,5 +1,6 @@
 mod buffer;
 mod char_string;
+mod completer;
 mod navigation;
 mod writer;
 

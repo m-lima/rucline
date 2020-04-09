@@ -38,6 +38,10 @@ impl CharString {
     {
         self.0.drain(range);
     }
+
+    pub(super) fn starts_with(&self, other: &Self) -> bool {
+        self.0.starts_with(&other.0)
+    }
 }
 
 impl std::ops::Index<usize> for CharString {
