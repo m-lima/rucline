@@ -81,7 +81,7 @@ impl Buffer {
                 let end = super::navigation::next_word(self.position, &self.chars);
                 self.chars.drain(start + 1..end);
                 self.chars[start] = ' ';
-                self.position = start;
+                self.position = start + 1;
             }
             Scope::WholeLine => self.clear(),
         }
@@ -114,6 +114,15 @@ impl Buffer {
                 }
             }
         }
+    }
+}
+
+impl std::ops::Deref for Buffer {
+    type Target = CharString;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.chars
     }
 }
 

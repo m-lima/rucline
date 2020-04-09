@@ -20,7 +20,11 @@ impl Writer {
         })
     }
 
-    pub(super) fn print(&mut self, buffer: &Buffer) -> Result<(), crate::ErrorKind> {
+    pub(super) fn print(
+        &mut self,
+        buffer: &Buffer,
+        completion: &Option<CharString>,
+    ) -> Result<(), crate::ErrorKind> {
         use std::io::Write;
         let mut stdout = std::io::stdout();
 
@@ -28,6 +32,7 @@ impl Writer {
 
         crossterm::queue!(
             stdout,
+            crossterm::style::ResetColor,
             crossterm::terminal::Clear(crossterm::terminal::ClearType::FromCursorDown),
         )?;
 
@@ -35,6 +40,17 @@ impl Writer {
         self.printed_length = buffer.len();
 
         crossterm::queue!(stdout, crossterm::style::Print(&buffer),)?;
+
+        if let Some(completion) = completion {
+            crossterm::queue!(
+                stdout,
+                crossterm::cursor::SavePosition,
+                crossterm::style::SetForegroundColor(crossterm::style::Color::Blue),
+                crossterm::style::Print(completion),
+                crossterm::style::ResetColor,
+                crossterm::cursor::RestorePosition,
+            )?;
+        }
 
         rewind_cursor(&mut stdout, self.cursor_offset)?;
 

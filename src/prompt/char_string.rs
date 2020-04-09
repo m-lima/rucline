@@ -44,17 +44,23 @@ impl CharString {
     }
 }
 
-impl std::ops::Index<usize> for CharString {
-    type Output = char;
+impl<I> std::ops::Index<I> for CharString
+where
+    I: std::slice::SliceIndex<[char]>,
+{
+    type Output = I::Output;
     #[inline]
-    fn index(&self, index: usize) -> &Self::Output {
+    fn index(&self, index: I) -> &Self::Output {
         &self.0[index]
     }
 }
 
-impl std::ops::IndexMut<usize> for CharString {
+impl<I> std::ops::IndexMut<I> for CharString
+where
+    I: std::slice::SliceIndex<[char]>,
+{
     #[inline]
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+    fn index_mut(&mut self, index: I) -> &mut Self::Output {
         &mut self.0[index]
     }
 }
@@ -71,6 +77,12 @@ impl std::ops::Deref for CharString {
 impl std::convert::From<&str> for CharString {
     fn from(data: &str) -> Self {
         Self(data.chars().collect())
+    }
+}
+
+impl std::convert::From<&[char]> for CharString {
+    fn from(data: &[char]) -> Self {
+        Self(data.iter().map(Clone::clone).collect())
     }
 }
 
