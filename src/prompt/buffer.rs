@@ -21,14 +21,14 @@ impl Buffer {
     }
 
     #[inline]
-    pub(super) fn _position(&self) -> usize {
+    pub(super) fn position(&self) -> usize {
         self.position
     }
 
-    #[inline]
-    pub(super) fn len(&self) -> usize {
-        self.chars.len()
-    }
+    // #[inline]
+    // pub(super) fn len(&self) -> usize {
+    //     self.chars.len()
+    // }
 
     #[inline]
     pub(super) fn clear(&mut self) {

@@ -72,7 +72,6 @@ struct Writer<'a> {
     prompt: Option<&'a CharString>,
     start: usize,
     width: usize,
-    prev_length: usize,
 }
 
 impl<'a> Writer<'a> {
@@ -88,7 +87,6 @@ impl<'a> Writer<'a> {
             prompt,
             start,
             width,
-            prev_length: 0,
         })
     }
 
@@ -96,27 +94,32 @@ impl<'a> Writer<'a> {
         self.width = usize::from(width);
     }
 
+    // Allowed because we catch overflows
+    #[allow(clippy::cast_possible_truncation)]
+    fn calculate_cursor_position(&self, buffer: &buffer::Buffer) -> Result<(u16, u16), crate::ErrorKind> {
+        let position = self.start + buffer.position();
+        let lines = (position - 1) / self.width;
+        let columns = position + 1 - lines * self.width;
+
+        if lines > usize::from(u16::max_value()) || columns > usize::from(u16::max_value()){
+            return Err(crate::ErrorKind::ResizingTerminalFailure(String::from(
+                "terminal width is too narrow",
+            )));
+        }
+        Ok((columns as u16, lines as u16))
+    }
+
     fn print(&mut self, buffer: &buffer::Buffer) -> Result<(), crate::ErrorKind> {
         use std::io::Write;
         let mut stdout = std::io::stdout();
 
-        // Allowed because in the rare case of overflow, it is caught in the `if` block
-        #[allow(clippy::cast_possible_truncation)]
-        {
-            let lines = self.prev_length / self.width;
-            if lines > 0 {
-                if lines > usize::from(u16::max_value()) {
-                    return Err(crate::ErrorKind::ResizingTerminalFailure(String::from(
-                        "terminal width is too narrow",
-                    )));
-                }
-                crossterm::queue!(stdout, crossterm::cursor::MoveUp(lines as u16))?;
-            }
-        }
+        let cursor = self.calculate_cursor_position(&buffer)?;
 
         crossterm::queue!(
             stdout,
+            crossterm::cursor::MoveUp(cursor.1),
             crossterm::cursor::MoveToColumn(0),
+            crossterm::cursor::SavePosition,
             crossterm::terminal::Clear(crossterm::terminal::ClearType::FromCursorDown),
         )?;
 
@@ -124,15 +127,12 @@ impl<'a> Writer<'a> {
             crossterm::queue!(stdout, crossterm::style::Print(prompt))?;
         }
 
-        self.prev_length = self.start + buffer.len();
-        if self.prev_length > 0 {
-            self.prev_length -= 1;
-        }
-
         crossterm::execute!(
             stdout,
             crossterm::style::Print(&buffer),
-            crossterm::cursor::MoveToColumn(0)
+            crossterm::cursor::RestorePosition,
+            crossterm::cursor::MoveToColumn(cursor.0),
+            crossterm::cursor::MoveDown(cursor.1),
         )
     }
 }
