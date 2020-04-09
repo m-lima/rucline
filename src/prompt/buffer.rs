@@ -26,13 +26,8 @@ impl Buffer {
     }
 
     #[inline]
-    pub(super) fn _len(&self) -> usize {
+    pub(super) fn len(&self) -> usize {
         self.chars.len()
-    }
-
-    #[inline]
-    pub(super) fn chars(&self) -> &[char] {
-        &self.chars
     }
 
     #[inline]

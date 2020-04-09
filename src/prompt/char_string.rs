@@ -31,11 +31,6 @@ impl CharString {
         self.0.remove(index);
     }
 
-    // #[inline]
-    // pub(super) fn chunks_exact(&self, chunk_size: usize) -> std::slice::ChunksExact<'_, char> {
-    //     self.0.chunks_exact(chunk_size)
-    // }
-
     #[inline]
     pub(super) fn drain<R>(&mut self, range: R)
     where

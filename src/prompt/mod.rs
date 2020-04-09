@@ -28,18 +28,26 @@ impl Prompt {
     }
 
     pub fn read_line(&self) -> Result<Option<String>, crate::ErrorKind> {
-        let mut writer = Writer::new()?;
+        let mut writer = Writer::new(self.prompt.as_ref())?;
         let mut buffer = buffer::Buffer::new();
 
+        writer.print(&buffer)?;
         loop {
-            writer.print(&self.prompt, &buffer)?;
-
             match crossterm::event::read()? {
-                crossterm::event::Event::Resize(width, heigth) => writer.resize(width, heigth)?,
+                crossterm::event::Event::Resize(width, _) => writer.resize(width),
                 crossterm::event::Event::Key(e) => match action_for(self.bindings.as_ref(), e) {
-                    Action::Write(c) => buffer.write(c),
-                    Action::Delete(scope) => buffer.delete(scope),
-                    Action::Move(movement) => buffer.move_cursor(movement),
+                    Action::Write(c) => {
+                        buffer.write(c);
+                        writer.print(&buffer)?;
+                    }
+                    Action::Delete(scope) => {
+                        buffer.delete(scope);
+                        writer.print(&buffer)?;
+                    }
+                    Action::Move(movement) => {
+                        buffer.move_cursor(movement);
+                        writer.print(&buffer)?;
+                    }
                     Action::Complete(_) | Action::Suggest(_) => {}
                     Action::Noop => continue,
                     Action::Accept => return Ok(Some(buffer.to_string())),
@@ -60,51 +68,50 @@ impl Default for Prompt {
     }
 }
 
-struct Writer {
-    width: u16,
-    height: u16,
-    prev_lines: u16,
+struct Writer<'a> {
+    prompt: Option<&'a CharString>,
+    start: usize,
+    width: usize,
+    prev_length: usize,
 }
 
-impl Writer {
-    fn new() -> Result<Self, crate::ErrorKind> {
+impl<'a> Writer<'a> {
+    fn new(prompt: Option<&'a CharString>) -> Result<Self, crate::ErrorKind> {
         crossterm::terminal::enable_raw_mode()?;
-        let (width, height) = crossterm::terminal::size()?;
+        let width = crossterm::terminal::size().map(|size| usize::from(size.0))?;
+        let start = if let Some(prompt) = prompt {
+            prompt.len()
+        } else {
+            0
+        };
         Ok(Self {
+            prompt,
+            start,
             width,
-            height,
-            prev_lines: 0,
+            prev_length: 0,
         })
     }
 
-    fn resize(&mut self, width: u16, height: u16) -> Result<(), crate::ErrorKind> {
-        self.width = width;
-        self.height = height;
-
-        if self.prev_lines > 0 {
-            use std::io::Write;
-            crossterm::queue!(
-                std::io::stdout(),
-                crossterm::cursor::MoveUp(self.prev_lines),
-            )?;
-            self.prev_lines = 0;
-        }
-
-        Ok(())
+    fn resize(&mut self, width: u16) {
+        self.width = usize::from(width);
     }
 
-    // TODO: Allow long strings
-    #[allow(clippy::cast_possible_truncation)]
-    fn print(
-        &mut self,
-        prompt: &Option<CharString>,
-        buffer: &buffer::Buffer,
-    ) -> Result<(), crate::ErrorKind> {
+    fn print(&mut self, buffer: &buffer::Buffer) -> Result<(), crate::ErrorKind> {
         use std::io::Write;
         let mut stdout = std::io::stdout();
 
-        if self.prev_lines > 0 {
-            crossterm::queue!(stdout, crossterm::cursor::MoveUp(self.prev_lines),)?;
+        // Allowed because in the rare case of overflow, it is caught in the `if` block
+        #[allow(clippy::cast_possible_truncation)]
+        {
+            let lines = self.prev_length / self.width;
+            if lines > 0 {
+                if lines > usize::from(u16::max_value()) {
+                    return Err(crate::ErrorKind::ResizingTerminalFailure(String::from(
+                        "terminal width is too narrow",
+                    )));
+                }
+                crossterm::queue!(stdout, crossterm::cursor::MoveUp(lines as u16))?;
+            }
         }
 
         crossterm::queue!(
@@ -113,76 +120,24 @@ impl Writer {
             crossterm::terminal::Clear(crossterm::terminal::ClearType::FromCursorDown),
         )?;
 
-        // let (prompt_length, start_position) = prompt.map_or((0,0), |prompt|{
-        //     crossterm::queue!(stdout, crossterm::style::Print(&prompt),)?;
-        //     (prompt.len(), 0)
-        // });
-
-        let mut current_column = 0;
-        let mut lines = 0;
-        if let Some(prompt) = prompt {
-            lines += self.print_multiline(&mut stdout, &prompt, &mut current_column)?;
+        if let Some(prompt) = self.prompt {
+            crossterm::queue!(stdout, crossterm::style::Print(prompt))?;
         }
 
-        lines += self.print_multiline(&mut stdout, buffer.chars(), &mut current_column)?;
-        self.prev_lines = lines;
-
-        crossterm::execute!(stdout, crossterm::cursor::MoveToColumn(0))
-        // crossterm::cursor::MoveToColumn((start + buffer.position() + 1) as u16)
-    }
-
-    // Allowed because we always cap on width size, which is never larger than u16::max_value
-    // #[allow(clippy::cast_possible_truncation)]
-    fn print_multiline(
-        &self,
-        stdout: &mut impl std::io::Write,
-        string: &[char],
-        current_column: &mut u16,
-    ) -> Result<u16, crate::ErrorKind> {
-        let mut lines = 0;
-        for c in string {
-            if *current_column == self.width {
-            //     let line = crossterm::cursor::position().map(|pos| pos.1)?;
-            //     if line == self.height {
-            //         crossterm::queue!(stdout, crossterm::terminal::ScrollUp(1))?;
-            //     }
-            //     crossterm::queue!(
-            //         stdout,
-            //         crossterm::cursor::MoveDown(1),
-            //         crossterm::cursor::MoveToColumn(0)
-            //     )?;
-                *current_column = 0;
-                lines += 1;
-            }
-
-            crossterm::queue!(stdout, crossterm::style::Print(*c))?;
-            *current_column += 1;
+        self.prev_length = self.start + buffer.len();
+        if self.prev_length > 0 {
+            self.prev_length -= 1;
         }
-        Ok(lines)
-        // let available_width = usize::from(width - *current_column);
-        // let mut lines = 0;
-        // if string.len() < available_width {
-        //     crossterm::queue!(stdout, crossterm::style::Print(&string))?;
-        //     current_column += string.len() as u16;
-        //     Ok(lines)
-        // } else {
-        //     let chunk = &string[0..available_width];
-        //     crossterm::queue!(stdout, crossterm::style::Print(&chunk), crossterm::style::Print('\n'))?;
-        //     lines += 1;
-        //     let chunks = &string[available_width..].chunks_exact(usize::from(width));
-        //     for chunk in chunks {
-        //         crossterm::queue!(stdout, crossterm::style::Print(&chunk), crossterm::style::Print('\n'))?;
-        //         lines += 1;
-        //     }
-        //     let chunk = chunks.remainder();
-        //     current_column = chunk.len();
-        //     crossterm::queue!(stdout, crossterm::style::Print(&chunk))?;
-        //     Ok(lines)
-        // }
+
+        crossterm::execute!(
+            stdout,
+            crossterm::style::Print(&buffer),
+            crossterm::cursor::MoveToColumn(0)
+        )
     }
 }
 
-impl std::ops::Drop for Writer {
+impl std::ops::Drop for Writer<'_> {
     // Allowed because this is a drop and the previous construction already managed the get through
     #[allow(unused_must_use)]
     fn drop(&mut self) {
