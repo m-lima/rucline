@@ -28,28 +28,25 @@ impl Prompt {
     }
 
     pub fn read_line(&self) -> Result<Option<String>, crate::ErrorKind> {
-        let stdout = std::io::stdout();
-        let mut writer = Writer::new(&stdout)?;
+        let mut writer = Writer::new()?;
         let mut buffer = buffer::Buffer::new();
 
         loop {
             writer.print(&self.prompt, &buffer)?;
-            match self.next_event()? {
-                Action::Write(c) => buffer.write(c),
-                Action::Delete(scope) => buffer.delete(scope),
-                Action::Move(movement) => buffer.move_cursor(movement),
-                Action::Complete(_) | Action::Suggest(_) => {}
-                Action::Noop => continue,
-                Action::Accept => return Ok(Some(buffer.to_string())),
-                Action::Cancel => return Ok(None),
-            }
-        }
-    }
 
-    fn next_event(&self) -> Result<Action, crate::ErrorKind> {
-        match crossterm::event::read()? {
-            crossterm::event::Event::Key(e) => Ok(action_for(self.bindings.as_ref(), e)),
-            _ => Ok(Action::Noop),
+            match crossterm::event::read()? {
+                crossterm::event::Event::Resize(width, heigth) => writer.resize(width, heigth),
+                crossterm::event::Event::Key(e) => match action_for(self.bindings.as_ref(), e) {
+                    Action::Write(c) => buffer.write(c),
+                    Action::Delete(scope) => buffer.delete(scope),
+                    Action::Move(movement) => buffer.move_cursor(movement),
+                    Action::Complete(_) | Action::Suggest(_) => {}
+                    Action::Noop => continue,
+                    Action::Accept => return Ok(Some(buffer.to_string())),
+                    Action::Cancel => return Ok(None),
+                },
+                _ => continue,
+            }
         }
     }
 }
@@ -63,18 +60,26 @@ impl Default for Prompt {
     }
 }
 
-struct Writer<'a> {
-    lock: std::io::StdoutLock<'a>,
-    _row: u16,
+struct Writer {
+    width: u16,
+    height: u16,
+    prev_length: usize,
 }
 
-impl<'a> Writer<'a> {
-    fn new(stdout: &'a std::io::Stdout) -> Result<Self, crate::ErrorKind> {
+impl Writer {
+    fn new() -> Result<Self, crate::ErrorKind> {
         crossterm::terminal::enable_raw_mode()?;
+        let (width, height) = crossterm::terminal::size()?;
         Ok(Self {
-            lock: stdout.lock(),
-            _row: crossterm::cursor::position().map(|pos| pos.1)?,
+            width,
+            height,
+            prev_length: 0,
         })
+    }
+
+    fn resize(&mut self, width: u16, height: u16) {
+        self.width = width;
+        self.height = height;
     }
 
     // TODO: Allow long strings
@@ -85,36 +90,36 @@ impl<'a> Writer<'a> {
         buffer: &buffer::Buffer,
     ) -> Result<(), crate::ErrorKind> {
         use std::io::Write;
+        let mut stdout = std::io::stdout();
 
         crossterm::queue!(
-            self.lock,
-            crossterm::cursor::MoveToColumn(0),
-            crossterm::terminal::Clear(crossterm::terminal::ClearType::CurrentLine),
+            stdout,
+            crossterm::cursor::MoveTo(0, 20),
+            crossterm::terminal::Clear(crossterm::terminal::ClearType::FromCursorDown),
         )?;
 
         let start = if let Some(prompt) = prompt {
-            crossterm::queue!(self.lock, crossterm::style::Print(prompt))?;
+            crossterm::queue!(stdout, crossterm::style::Print(&prompt),)?;
             prompt.len()
         } else {
             0
         };
 
-        crossterm::execute!(
-            self.lock,
-            crossterm::style::Print(buffer),
-            crossterm::cursor::MoveToColumn((start + buffer.position() + 1) as u16)
-        )
+        self.prev_length = start + buffer.len();
+
+        crossterm::execute!(stdout, crossterm::style::Print(buffer),)
+        // crossterm::cursor::MoveToColumn((start + buffer.position() + 1) as u16)
     }
 }
 
-impl<'a> std::ops::Drop for Writer<'a> {
+impl std::ops::Drop for Writer {
     // Allowed because this is a drop and the previous construction already managed the get through
     #[allow(unused_must_use)]
     fn drop(&mut self) {
         use std::io::Write;
         crossterm::terminal::disable_raw_mode();
         crossterm::execute!(
-            self.lock,
+            std::io::stdout(),
             crossterm::style::ResetColor,
             crossterm::style::Print('\n')
         );

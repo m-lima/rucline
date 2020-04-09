@@ -15,5 +15,6 @@ default = []
 serialize = [ "serde", "crossterm/serde" ]
 
 [dependencies]
-crossterm = "0.16"
+#crossterm = "0.17"
+crossterm = { path = "../../../fork/crossterm" }
 serde = { version = "1", features = [ "derive" ], optional = true }

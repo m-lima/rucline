@@ -20,13 +20,13 @@ impl Buffer {
         Buffer::default()
     }
 
-    pub(super) fn position(&self) -> &usize {
-        &self.position
+    pub(super) fn _position(&self) -> usize {
+        self.position
     }
 
-    // pub(super) fn at_end(&self) -> bool {
-    //     self.position == self.chars.len()
-    // }
+    pub(super) fn len(&self) -> usize {
+        self.chars.len()
+    }
 
     pub(super) fn clear(&mut self) {
         self.chars.clear();
