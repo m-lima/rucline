@@ -1,6 +1,6 @@
 use crate::key_bindings::{Direction, Range, Scope};
 
-use super::char_string::CharString;
+use super::CharString;
 
 /// A [`CharString`](../char_string/struct.CharString.html) that also keeps track of its
 /// cursor position.

@@ -1,12 +1,12 @@
 mod buffer;
 mod char_string;
-mod completer;
 mod navigation;
 mod writer;
 
+use crate::completer::Completer;
+
 use buffer::Buffer;
 use char_string::{CharString, CharStringView};
-use completer::Completer;
 use writer::Writer;
 
 use crate::key_bindings::{action_for, Action, Direction, KeyBindings, Range, Scope};
@@ -14,7 +14,7 @@ use crate::key_bindings::{action_for, Action, Direction, KeyBindings, Range, Sco
 pub struct Prompt {
     prompt: Option<CharString>,
     bindings: Option<KeyBindings>,
-    completer: Option<Completer>,
+    completer: Option<Box<dyn Completer>>,
 }
 
 impl Prompt {
@@ -23,23 +23,23 @@ impl Prompt {
         Prompt::default()
     }
 
-    pub fn prompt(&mut self, prompt: Option<&str>) -> &mut Self {
-        self.prompt = prompt.map(std::convert::Into::into);
+    pub fn prompt(&mut self, prompt: &str) -> &mut Self {
+        self.prompt = Some(prompt.into());
         self
     }
 
-    pub fn bindings(&mut self, bindings: Option<KeyBindings>) -> &mut Self {
-        self.bindings = bindings;
+    pub fn bindings(&mut self, bindings: KeyBindings) -> &mut Self {
+        self.bindings = Some(bindings);
         self
     }
 
-    pub fn completions(&mut self, completions: Option<&[&str]>) -> &mut Self {
-        self.completer = completions.map(std::convert::Into::into);
+    pub fn completer(&mut self, completer: impl Completer + 'static) -> &mut Self {
+        self.completer = Some(Box::new(completer));
         self
     }
 
     pub fn read_line(&self) -> Result<Option<String>, crate::ErrorKind> {
-        let mut context = Context::new(self.prompt.as_ref(), self.completer.as_ref())?;
+        let mut context = Context::new(self.prompt.as_ref(), &self.completer)?;
 
         context.print()?;
         loop {
@@ -72,14 +72,14 @@ impl Default for Prompt {
 struct Context<'a> {
     writer: Writer,
     buffer: Buffer,
-    completer: Option<&'a Completer>,
+    completer: &'a Option<Box<dyn Completer>>,
     completion: Option<CharStringView<'a>>,
 }
 
 impl<'a> Context<'a> {
     fn new(
         prompt: Option<&CharString>,
-        completer: Option<&'a Completer>,
+        completer: &'a Option<Box<dyn Completer>>,
     ) -> Result<Self, crate::ErrorKind> {
         Ok(Self {
             writer: Writer::new(prompt)?,
@@ -111,7 +111,6 @@ impl<'a> Context<'a> {
 
     fn move_cursor(&mut self, range: Range, direction: Direction) -> Result<(), crate::ErrorKind> {
         if self.buffer.at_end() && direction == Direction::Forward {
-            // TODO: Should override `Single` with `Line` ?
             self.complete(range)
         } else {
             self.buffer.move_cursor(range, direction);
@@ -147,7 +146,9 @@ impl<'a> Context<'a> {
 
     fn update_completion(&mut self) {
         if let Some(completer) = self.completer {
-            self.completion = completer.complete_for(&self.buffer);
+            self.completion = completer
+                .complete_for(&self.buffer)
+                .map(std::convert::Into::into);
         }
     }
 }

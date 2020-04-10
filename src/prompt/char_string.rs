@@ -1,14 +1,9 @@
 pub(super) struct CharString(Vec<char>);
 
-impl Default for CharString {
-    fn default() -> Self {
-        Self(Vec::new())
-    }
-}
-
 impl CharString {
+    #[must_use]
     pub(super) fn new() -> Self {
-        CharString::default()
+        Self(Vec::new())
     }
 
     #[inline]
@@ -59,16 +54,6 @@ where
     #[inline]
     fn index(&self, index: I) -> &Self::Output {
         &self.0[index]
-    }
-}
-
-impl<I> std::ops::IndexMut<I> for CharString
-where
-    I: std::slice::SliceIndex<[char]>,
-{
-    #[inline]
-    fn index_mut(&mut self, index: I) -> &mut Self::Output {
-        &mut self.0[index]
     }
 }
 
