@@ -12,6 +12,7 @@ use writer::Writer;
 use crate::key_bindings::{action_for, Action, Direction, KeyBindings, Range, Scope};
 
 pub struct Prompt {
+    erase_after_read: bool,
     prompt: Option<CharString>,
     bindings: Option<KeyBindings>,
     completer: Option<Box<dyn Completer>>,
@@ -21,6 +22,11 @@ impl Prompt {
     #[must_use]
     pub fn new() -> Self {
         Prompt::default()
+    }
+
+    pub fn erase_after_read(&mut self, erase_after_read: bool) -> &mut Self {
+        self.erase_after_read = erase_after_read;
+        self
     }
 
     pub fn prompt(&mut self, prompt: &str) -> &mut Self {
@@ -39,7 +45,8 @@ impl Prompt {
     }
 
     pub fn read_line(&self) -> Result<Option<String>, crate::ErrorKind> {
-        let mut context = Context::new(self.prompt.as_ref(), &self.completer)?;
+        let mut context =
+            Context::new(self.erase_after_read, self.prompt.as_ref(), &self.completer)?;
 
         context.print()?;
         loop {
@@ -62,6 +69,7 @@ impl Prompt {
 impl Default for Prompt {
     fn default() -> Self {
         Self {
+            erase_after_read: false,
             prompt: None,
             bindings: None,
             completer: None,
@@ -78,11 +86,12 @@ struct Context<'a> {
 
 impl<'a> Context<'a> {
     fn new(
+        erase_on_drop: bool,
         prompt: Option<&CharString>,
         completer: &'a Option<Box<dyn Completer>>,
     ) -> Result<Self, crate::ErrorKind> {
         Ok(Self {
-            writer: Writer::new(prompt)?,
+            writer: Writer::new(erase_on_drop, prompt)?,
             buffer: Buffer::new(),
             completer,
             completion: None,
@@ -150,15 +159,5 @@ impl<'a> Context<'a> {
                 .complete_for(&self.buffer)
                 .map(std::convert::Into::into);
         }
-    }
-}
-
-impl std::ops::Drop for Context<'_> {
-    // Allowed because this is a drop and the previous construction already managed the get through
-    #[allow(unused_must_use)]
-    fn drop(&mut self) {
-        // Flush the user written buffer before dropping the writer
-        self.buffer.go_to_end();
-        self.writer.print(&self.buffer, None);
     }
 }
