@@ -148,3 +148,13 @@ impl<'a> Context<'a> {
         }
     }
 }
+
+impl std::ops::Drop for Context<'_> {
+    // Allowed because this is a drop and the previous construction already managed the get through
+    #[allow(unused_must_use)]
+    fn drop(&mut self) {
+        // Flush the user written buffer before dropping the writer
+        self.buffer.move_cursor(Range::Line(Direction::Forward));
+        self.writer.print(&self.buffer, &None);
+    }
+}

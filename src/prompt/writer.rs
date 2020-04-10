@@ -75,7 +75,6 @@ fn rewind_cursor(stdout: &mut std::io::Stdout, amount: usize) -> Result<(), crat
     crossterm::queue!(stdout, crossterm::cursor::MoveLeft(remaining as u16),)
 }
 
-// TODO: Fix showing characters upon desctruction
 impl std::ops::Drop for Writer {
     // Allowed because this is a drop and the previous construction already managed the get through
     #[allow(unused_must_use)]
