@@ -110,33 +110,39 @@ impl<'a> Context<'a> {
     }
 
     fn move_cursor(&mut self, range: Range, direction: Direction) -> Result<(), crate::ErrorKind> {
-        // TODO handle completiong when buffer is `at_end`
-        self.buffer.move_cursor(range, direction);
-        self.writer.print(&self.buffer, &self.completion)
+        if self.buffer.at_end() && direction == Direction::Forward {
+            // TODO: Should override `Single` with `Line` ?
+            self.complete(range)
+        } else {
+            self.buffer.move_cursor(range, direction);
+            self.writer.print(&self.buffer, &self.completion)
+        }
     }
 
     fn complete(&mut self, range: Range) -> Result<(), crate::ErrorKind> {
-        // TODO handle when buffer is not `at_end`
-        if self.buffer.at_end() {
-            if let Some(completion) = &self.completion {
-                match range {
-                    Range::Line => {
-                        self.buffer.write_str(completion);
-                        self.update_completion();
-                        self.writer.print(&self.buffer, &self.completion)?;
-                    }
-                    Range::Word => {
-                        let index = navigation::next_word(0, &completion);
-                        self.buffer.write_str(&completion[0..index]);
-                        self.update_completion();
-                        self.writer.print(&self.buffer, &self.completion)?;
-                    }
-                    _ => {}
+        self.buffer.go_to_end();
+        if let Some(completion) = &self.completion {
+            match range {
+                Range::Line => {
+                    self.buffer.write_str(completion);
+                    self.update_completion();
+                    self.writer.print(&self.buffer, &self.completion)
+                }
+                Range::Word => {
+                    let index = navigation::next_word(0, &completion);
+                    self.buffer.write_str(&completion[0..index]);
+                    self.update_completion();
+                    self.writer.print(&self.buffer, &self.completion)
+                }
+                Range::Single => {
+                    self.buffer.write(completion[0]);
+                    self.update_completion();
+                    self.writer.print(&self.buffer, &self.completion)
                 }
             }
+        } else {
+            Ok(())
         }
-
-        Ok(())
     }
 
     fn update_completion(&mut self) {
@@ -151,7 +157,7 @@ impl std::ops::Drop for Context<'_> {
     #[allow(unused_must_use)]
     fn drop(&mut self) {
         // Flush the user written buffer before dropping the writer
-        self.buffer.move_cursor(Range::Line, Direction::Forward);
+        self.buffer.go_to_end();
         self.writer.print(&self.buffer, &None);
     }
 }

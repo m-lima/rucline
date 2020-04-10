@@ -39,6 +39,13 @@ impl Buffer {
         self.cursor == self.chars.len()
     }
 
+    /// Puts the cursor at the end of the buffer
+    /// This is short-hand for `move_cursor(Range::Line, Direction::Forward)`
+    #[inline]
+    pub(super) fn go_to_end(&mut self) {
+        self.cursor = self.chars.len();
+    }
+
     /// Returns the length of the buffer.
     #[inline]
     pub(super) fn len(&self) -> usize {
