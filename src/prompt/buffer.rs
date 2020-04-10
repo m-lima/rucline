@@ -1,5 +1,6 @@
-use super::char_string::CharString;
 use crate::key_bindings::{Direction, Range, Scope};
+
+use super::char_string::CharString;
 
 /// A [`CharString`](../char_string/struct.CharString.html) that also keeps track of its
 /// cursor position.
@@ -70,35 +71,39 @@ impl Buffer {
     /// Deletes the given [`scope`](../../key_bindings/enum.Scope.html) from this buffer
     /// and updates the cursor accordingly.
     pub(super) fn delete(&mut self, scope: Scope) {
+        use Direction::*;
+        use Range::*;
+        use Scope::*;
+
         match scope {
-            Scope::Relative(Range::Single(Direction::Backward)) => {
+            Relative(Single, Backward) => {
                 if self.cursor > 0 {
                     self.chars.remove(self.cursor - 1);
                     self.cursor -= 1;
                 }
             }
-            Scope::Relative(Range::Single(Direction::Forward)) => {
+            Relative(Single, Forward) => {
                 if self.cursor < self.chars.len() {
                     self.chars.remove(self.cursor);
                 }
             }
-            Scope::Relative(Range::Word(Direction::Backward)) => {
+            Relative(Word, Backward) => {
                 let index = super::navigation::previous_word(self.cursor, &self.chars);
                 self.chars.drain(index..self.cursor);
                 self.cursor = index;
             }
-            Scope::Relative(Range::Word(Direction::Forward)) => {
+            Relative(Word, Forward) => {
                 let index = super::navigation::next_word(self.cursor, &self.chars);
                 self.chars.drain(self.cursor..index);
             }
-            Scope::Relative(Range::Line(Direction::Backward)) => {
+            Relative(Line, Backward) => {
                 self.chars.drain(0..self.cursor);
                 self.cursor = 0;
             }
-            Scope::Relative(Range::Line(Direction::Forward)) => {
+            Relative(Line, Forward) => {
                 self.chars.drain(self.cursor..self.chars.len());
             }
-            Scope::WholeWord => {
+            WholeWord => {
                 let mut start = super::navigation::previous_word_end(self.cursor, &self.chars);
                 let end = super::navigation::next_word(self.cursor, &self.chars);
 
@@ -110,33 +115,36 @@ impl Buffer {
                 self.chars.drain(start..end);
                 self.cursor = start;
             }
-            Scope::WholeLine => self.clear(),
+            WholeLine => self.clear(),
         }
     }
 
     /// Moves the cursor by [`range`](../../key_bindings/enum.Range.html)
-    pub(super) fn move_cursor(&mut self, range: Range) {
-        match range {
-            Range::Single(Direction::Backward) => {
+    pub(super) fn move_cursor(&mut self, range: Range, direction: Direction) {
+        use Direction::*;
+        use Range::*;
+
+        match (range, direction) {
+            (Single, Backward) => {
                 if self.cursor > 0 {
                     self.cursor -= 1;
                 }
             }
-            Range::Single(Direction::Forward) => {
+            (Single, Forward) => {
                 if self.cursor < self.chars.len() {
                     self.cursor += 1;
                 }
             }
-            Range::Word(Direction::Backward) => {
+            (Word, Backward) => {
                 self.cursor = super::navigation::previous_word(self.cursor, &self.chars);
             }
-            Range::Word(Direction::Forward) => {
+            (Word, Forward) => {
                 self.cursor = super::navigation::next_word(self.cursor, &self.chars);
             }
-            Range::Line(Direction::Backward) => {
+            (Line, Backward) => {
                 self.cursor = 0;
             }
-            Range::Line(Direction::Forward) => {
+            (Line, Forward) => {
                 if self.cursor < self.chars.len() {
                     self.cursor = self.chars.len();
                 }

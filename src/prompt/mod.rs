@@ -47,7 +47,7 @@ impl Prompt {
                 match action_for(self.bindings.as_ref(), e) {
                     Action::Write(c) => context.write(c)?,
                     Action::Delete(scope) => context.delete(scope)?,
-                    Action::Move(range) => context.move_cursor(range)?,
+                    Action::Move(range, direction) => context.move_cursor(range, direction)?,
                     Action::Complete(range) => context.complete(range)?,
                     Action::Suggest(_) => {}
                     Action::Noop => continue,
@@ -109,9 +109,9 @@ impl<'a> Context<'a> {
         self.writer.print(&self.buffer, &self.completion)
     }
 
-    fn move_cursor(&mut self, range: Range) -> Result<(), crate::ErrorKind> {
+    fn move_cursor(&mut self, range: Range, direction: Direction) -> Result<(), crate::ErrorKind> {
         // TODO handle completiong when buffer is `at_end`
-        self.buffer.move_cursor(range);
+        self.buffer.move_cursor(range, direction);
         self.writer.print(&self.buffer, &self.completion)
     }
 
@@ -119,16 +119,13 @@ impl<'a> Context<'a> {
         // TODO handle when buffer is not `at_end`
         if self.buffer.at_end() {
             if let Some(completion) = &self.completion {
-                use Direction::Forward;
-                use Range::*;
-
                 match range {
-                    Line(Forward) | Single(Forward) => {
+                    Range::Line => {
                         self.buffer.write_str(completion);
                         self.update_completion();
                         self.writer.print(&self.buffer, &self.completion)?;
                     }
-                    Word(Forward) => {
+                    Range::Word => {
                         let index = navigation::next_word(0, &completion);
                         self.buffer.write_str(&completion[0..index]);
                         self.update_completion();
@@ -154,7 +151,7 @@ impl std::ops::Drop for Context<'_> {
     #[allow(unused_must_use)]
     fn drop(&mut self) {
         // Flush the user written buffer before dropping the writer
-        self.buffer.move_cursor(Range::Line(Direction::Forward));
+        self.buffer.move_cursor(Range::Line, Direction::Forward);
         self.writer.print(&self.buffer, &None);
     }
 }
