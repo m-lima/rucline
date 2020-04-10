@@ -9,7 +9,7 @@ use char_string::CharString;
 use completer::Completer;
 use writer::Writer;
 
-use crate::key_bindings::{action_for, Action, KeyBindings};
+use crate::key_bindings::{action_for, Action, Direction::*, KeyBindings, Range::*};
 
 pub struct Prompt {
     prompt: Option<CharString>,
@@ -48,23 +48,32 @@ impl Prompt {
         loop {
             if let crossterm::event::Event::Key(e) = crossterm::event::read()? {
                 match action_for(self.bindings.as_ref(), e) {
-                    Action::Write(c) => {
-                        buffer.write(c);
-                        if let Some(completer) = &self.completer {
-                            completion = completer.complete_for(&buffer);
+                    Action::Write(c) => buffer.write(c),
+                    Action::Delete(scope) => buffer.delete(scope),
+                    Action::Move(range) => {
+                        if buffer.at_end() {
+                            if let Some(completion) = &completion {
+                                match range {
+                                    Line(Forward) | Single(Forward) => buffer.write_str(completion),
+                                    Word(Forward) => {
+                                        let index = navigation::next_word(0, &completion);
+                                        buffer.write_str(&completion[0..index]);
+                                    }
+                                    _ => {},
+                                }
+                            }
                         }
+                        buffer.move_cursor(range);
                     }
-                    Action::Delete(scope) => {
-                        buffer.delete(scope);
-                        if let Some(completer) = &self.completer {
-                            completion = completer.complete_for(&buffer);
-                        }
-                    }
-                    Action::Move(movement) => buffer.move_cursor(movement),
                     Action::Complete(_) | Action::Suggest(_) => {}
                     Action::Noop => continue,
                     Action::Accept => return Ok(Some(buffer.to_string())),
                     Action::Cancel => return Ok(None),
+                }
+
+                // TODO: Avoid this step if there was no change to the buffer's content
+                if let Some(completer) = &self.completer {
+                    completion = completer.complete_for(&buffer);
                 }
                 writer.print(&buffer, &completion)?;
             }

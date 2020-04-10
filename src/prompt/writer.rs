@@ -36,7 +36,7 @@ impl Writer {
             crossterm::terminal::Clear(crossterm::terminal::ClearType::FromCursorDown),
         )?;
 
-        self.cursor_offset = buffer.len() - buffer.position();
+        self.cursor_offset = buffer.len() - buffer.cursor();
         self.printed_length = buffer.len();
 
         crossterm::queue!(stdout, crossterm::style::Print(&buffer),)?;
@@ -44,12 +44,11 @@ impl Writer {
         if let Some(completion) = completion {
             crossterm::queue!(
                 stdout,
-                crossterm::cursor::SavePosition,
                 crossterm::style::SetForegroundColor(crossterm::style::Color::Blue),
                 crossterm::style::Print(completion),
                 crossterm::style::ResetColor,
-                crossterm::cursor::RestorePosition,
             )?;
+            rewind_cursor(&mut stdout, completion.len())?;
         }
 
         rewind_cursor(&mut stdout, self.cursor_offset)?;
@@ -76,6 +75,7 @@ fn rewind_cursor(stdout: &mut std::io::Stdout, amount: usize) -> Result<(), crat
     crossterm::queue!(stdout, crossterm::cursor::MoveLeft(remaining as u16),)
 }
 
+// TODO: Fix showing characters upon desctruction
 impl std::ops::Drop for Writer {
     // Allowed because this is a drop and the previous construction already managed the get through
     #[allow(unused_must_use)]

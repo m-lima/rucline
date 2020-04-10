@@ -22,6 +22,17 @@ impl CharString {
     }
 
     #[inline]
+    pub(super) fn insert_str(&mut self, index: usize, other: &[char]) {
+        if index == self.0.len() {
+            self.0.extend_from_slice(other);
+        } else {
+            let tail = self.0.drain(index..).collect::<Vec<_>>();
+            self.0.extend_from_slice(other);
+            self.0.extend(tail);
+        }
+    }
+
+    #[inline]
     pub(super) fn clear(&mut self) {
         self.0.clear();
     }
@@ -37,10 +48,6 @@ impl CharString {
         R: std::ops::RangeBounds<usize>,
     {
         self.0.drain(range);
-    }
-
-    pub(super) fn starts_with(&self, other: &Self) -> bool {
-        self.0.starts_with(&other.0)
     }
 }
 
