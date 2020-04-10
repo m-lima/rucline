@@ -5,7 +5,7 @@ mod navigation;
 mod writer;
 
 use buffer::Buffer;
-use char_string::CharString;
+use char_string::{CharString, CharStringView};
 use completer::Completer;
 use writer::Writer;
 
@@ -73,7 +73,7 @@ struct Context<'a> {
     writer: Writer,
     buffer: Buffer,
     completer: Option<&'a Completer>,
-    completion: Option<&'a CharString>,
+    completion: Option<CharStringView<'a>>,
 }
 
 impl<'a> Context<'a> {

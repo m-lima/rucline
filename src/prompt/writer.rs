@@ -1,4 +1,4 @@
-use super::{Buffer, CharString};
+use super::{Buffer, CharString, CharStringView};
 
 pub(super) struct Writer {
     printed_length: usize,
@@ -23,7 +23,7 @@ impl Writer {
     pub(super) fn print(
         &mut self,
         buffer: &Buffer,
-        completion: Option<&CharString>,
+        completion: Option<CharStringView<'_>>,
     ) -> Result<(), crate::ErrorKind> {
         use std::io::Write;
         let mut stdout = std::io::stdout();

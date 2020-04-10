@@ -108,3 +108,30 @@ impl std::fmt::Display for CharString {
         Ok(())
     }
 }
+
+#[derive(Copy, Clone)]
+pub(super) struct CharStringView<'a>(&'a [char]);
+
+impl<'a> std::convert::From<&'a [char]> for CharStringView<'a> {
+    fn from(data: &'a [char]) -> Self {
+        Self(data)
+    }
+}
+
+impl std::ops::Deref for CharStringView<'_> {
+    type Target = [char];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::fmt::Display for CharStringView<'_> {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use std::fmt::Write;
+        for c in self.0 {
+            fmt.write_char(*c)?;
+        }
+        Ok(())
+    }
+}
