@@ -6,7 +6,10 @@
 pub mod completer;
 pub mod key_bindings;
 pub mod prompt;
+pub mod suggester;
 
+pub use completer::Completer;
 pub use prompt::Prompt;
+pub use suggester::Suggester;
 
 pub use crossterm::ErrorKind;
