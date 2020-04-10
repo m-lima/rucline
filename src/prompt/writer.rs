@@ -66,6 +66,15 @@ impl Writer {
 
         crossterm::execute!(stdout)
     }
+
+    // TODO: This guy
+    pub(super) fn print_suggestions(
+        &mut self,
+        _suggestions: &[String],
+        _suggestion: Option<usize>,
+    ) -> Result<(), crate::ErrorKind> {
+        Ok(())
+    }
 }
 
 // Allowed because we slice `usize` into `u16` chunks
