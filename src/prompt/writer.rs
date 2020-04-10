@@ -23,7 +23,7 @@ impl Writer {
     pub(super) fn print(
         &mut self,
         buffer: &Buffer,
-        completion: &Option<CharString>,
+        completion: Option<&CharString>,
     ) -> Result<(), crate::ErrorKind> {
         use std::io::Write;
         let mut stdout = std::io::stdout();

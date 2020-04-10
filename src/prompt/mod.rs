@@ -73,7 +73,7 @@ struct Context<'a> {
     writer: Writer,
     buffer: Buffer,
     completer: Option<&'a Completer>,
-    completion: Option<CharString>,
+    completion: Option<&'a CharString>,
 }
 
 impl<'a> Context<'a> {
@@ -94,19 +94,19 @@ impl<'a> Context<'a> {
     }
 
     fn print(&mut self) -> Result<(), crate::ErrorKind> {
-        self.writer.print(&self.buffer, &self.completion)
+        self.writer.print(&self.buffer, self.completion)
     }
 
     fn write(&mut self, c: char) -> Result<(), crate::ErrorKind> {
         self.buffer.write(c);
         self.update_completion();
-        self.writer.print(&self.buffer, &self.completion)
+        self.writer.print(&self.buffer, self.completion)
     }
 
     fn delete(&mut self, scope: Scope) -> Result<(), crate::ErrorKind> {
         self.buffer.delete(scope);
         self.update_completion();
-        self.writer.print(&self.buffer, &self.completion)
+        self.writer.print(&self.buffer, self.completion)
     }
 
     fn move_cursor(&mut self, range: Range, direction: Direction) -> Result<(), crate::ErrorKind> {
@@ -115,7 +115,7 @@ impl<'a> Context<'a> {
             self.complete(range)
         } else {
             self.buffer.move_cursor(range, direction);
-            self.writer.print(&self.buffer, &self.completion)
+            self.writer.print(&self.buffer, self.completion)
         }
     }
 
@@ -126,18 +126,18 @@ impl<'a> Context<'a> {
                 Range::Line => {
                     self.buffer.write_str(completion);
                     self.update_completion();
-                    self.writer.print(&self.buffer, &self.completion)
+                    self.writer.print(&self.buffer, self.completion)
                 }
                 Range::Word => {
                     let index = navigation::next_word(0, &completion);
                     self.buffer.write_str(&completion[0..index]);
                     self.update_completion();
-                    self.writer.print(&self.buffer, &self.completion)
+                    self.writer.print(&self.buffer, self.completion)
                 }
                 Range::Single => {
                     self.buffer.write(completion[0]);
                     self.update_completion();
-                    self.writer.print(&self.buffer, &self.completion)
+                    self.writer.print(&self.buffer, self.completion)
                 }
             }
         } else {
@@ -158,6 +158,6 @@ impl std::ops::Drop for Context<'_> {
     fn drop(&mut self) {
         // Flush the user written buffer before dropping the writer
         self.buffer.go_to_end();
-        self.writer.print(&self.buffer, &None);
+        self.writer.print(&self.buffer, None);
     }
 }
