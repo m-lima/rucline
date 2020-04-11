@@ -7,3 +7,7 @@ Cargo.lock
 # IDEs
 .idea
 .vscode
+
+# Testing
+examples/tester.rs
+output

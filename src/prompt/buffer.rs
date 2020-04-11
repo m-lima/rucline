@@ -169,6 +169,14 @@ impl std::ops::Deref for Buffer {
     }
 }
 
+impl std::convert::From<&str> for Buffer {
+    fn from(string: &str) -> Self {
+        let chars = CharString::from(string);
+        let cursor = chars.len();
+        Self { chars, cursor }
+    }
+}
+
 impl std::fmt::Display for Buffer {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.chars.fmt(fmt)

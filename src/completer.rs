@@ -17,6 +17,8 @@ impl Basic {
 }
 
 impl Completer for Basic {
+    // Allowed because it is more readable this way
+    #[allow(clippy::find_map)]
     fn complete_for(&self, buffer: &[char]) -> Option<&[char]> {
         if buffer.is_empty() {
             None

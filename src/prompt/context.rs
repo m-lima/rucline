@@ -104,7 +104,7 @@ impl<'a> Context<'a> {
                 {
                     self.suggestion = match (direction, self.suggestion) {
                         (Forward, None) => Some(0),
-                        (Forward, Some(index)) if index < last_suggestion => Some(index - 1),
+                        (Forward, Some(index)) if index < last_suggestion => Some(index + 1),
                         (Forward, Some(_)) => None,
                         (Backward, None) => Some(last_suggestion),
                         (Backward, Some(0)) => None,
@@ -112,7 +112,8 @@ impl<'a> Context<'a> {
                     };
                 }
 
-                self.writer.print_suggestions(suggestions, self.suggestion)
+                self.writer
+                    .print_suggestions(&self.buffer, suggestions, self.suggestion)
             }
         } else {
             Ok(())
