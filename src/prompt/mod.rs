@@ -69,8 +69,10 @@ impl Prompt {
                     Action::Delete(scope) => context.delete(scope)?,
                     Action::Move(range, direction) => context.move_cursor(range, direction)?,
                     Action::Complete(range) => context.complete(range)?,
+                    // TODO: insert tab if not suggester
                     Action::Suggest(direction) => context.suggest(direction)?,
                     Action::Noop => continue,
+                    // TODO: Cancel completion
                     Action::Cancel => return Ok(None),
                     Action::Accept => return Ok(Some(context.buffer_as_string())),
                 }
