@@ -52,7 +52,6 @@ pub(super) fn action_for(
     }
 }
 
-// TODO: cannot paste multiline (it will trigger an Enter
 fn default_action(event: crossterm::event::KeyEvent) -> Action {
     use crossterm::event::KeyCode;
     use Action::*;

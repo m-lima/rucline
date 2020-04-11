@@ -9,7 +9,7 @@ pub(super) struct Context<'a> {
     completer: &'a Option<Box<dyn Completer>>,
     completion: Option<CharStringView<'a>>,
     suggester: &'a Option<Box<dyn Suggester>>,
-    suggestion: Option<usize>,
+    suggestions: Option<Suggestions>,
 }
 
 impl<'a> Context<'a> {
@@ -25,11 +25,12 @@ impl<'a> Context<'a> {
             completer,
             completion: None,
             suggester,
-            suggestion: None,
+            suggestions: None,
         })
     }
 
-    pub(super) fn buffer_as_string(&self) -> String {
+    pub(super) fn buffer_as_string(&mut self) -> String {
+        self.try_take_suggestion();
         self.buffer.to_string()
     }
 
@@ -38,12 +39,14 @@ impl<'a> Context<'a> {
     }
 
     pub(super) fn write(&mut self, c: char) -> Result<(), crate::ErrorKind> {
+        self.try_take_suggestion();
         self.buffer.write(c);
         self.update_completion();
         self.writer.print(&self.buffer, self.completion)
     }
 
     pub(super) fn delete(&mut self, scope: Scope) -> Result<(), crate::ErrorKind> {
+        self.try_take_suggestion();
         self.buffer.delete(scope);
         self.update_completion();
         self.writer.print(&self.buffer, self.completion)
@@ -54,6 +57,7 @@ impl<'a> Context<'a> {
         range: Range,
         direction: Direction,
     ) -> Result<(), crate::ErrorKind> {
+        self.try_take_suggestion();
         if self.buffer.at_end() && direction == Direction::Forward {
             self.complete(range)
         } else {
@@ -88,43 +92,95 @@ impl<'a> Context<'a> {
         }
     }
 
-    pub(super) fn suggest(&mut self, direction: Direction) -> Result<(), crate::ErrorKind> {
-        if let Some(suggester) = self.suggester {
-            let suggestions = suggester.suggest_for(&self.buffer);
-
-            if suggestions.is_empty() {
-                Ok(())
-            } else {
-                use Direction::*;
-
-                let last_suggestion = suggestions.len() - 1;
-
-                // Allowed because it is more readable
-                #[allow(clippy::match_same_arms)]
-                {
-                    self.suggestion = match (direction, self.suggestion) {
-                        (Forward, None) => Some(0),
-                        (Forward, Some(index)) if index < last_suggestion => Some(index + 1),
-                        (Forward, Some(_)) => None,
-                        (Backward, None) => Some(last_suggestion),
-                        (Backward, Some(0)) => None,
-                        (Backward, Some(index)) => Some(index - 1),
-                    };
-                }
-
-                self.writer
-                    .print_suggestions(&self.buffer, suggestions, self.suggestion)
-            }
-        } else {
-            Ok(())
-        }
-    }
-
     fn update_completion(&mut self) {
         if let Some(completer) = self.completer {
             self.completion = completer
                 .complete_for(&self.buffer)
                 .map(std::convert::Into::into);
+        }
+    }
+
+    pub(super) fn suggest(&mut self, direction: Direction) -> Result<(), crate::ErrorKind> {
+        if let Some(suggester) = &self.suggester {
+            if let Some(suggestions) = &mut self.suggestions {
+                suggestions.cycle(direction);
+                if let Some(index) = suggestions.index {
+                    return self.writer.print_suggestions(index, &suggestions.options);
+                }
+            } else {
+                let options = suggester.suggest_for(&self.buffer);
+                if !options.is_empty() {
+                    self.suggestions = Some(Suggestions::new(options, direction));
+                    let suggestions = self.suggestions.as_ref().unwrap();
+                    return self
+                        .writer
+                        .print_suggestions(suggestions.index.unwrap(), &suggestions.options);
+                }
+            }
+        }
+
+        self.writer.print(&self.buffer, self.completion)
+    }
+
+    pub(super) fn is_suggesting(&self) -> bool {
+        self.suggestions.is_some()
+    }
+
+    pub(super) fn cancel_suggestion(&mut self) -> Result<(), crate::ErrorKind> {
+        self.suggestions = None;
+        self.writer.print(&self.buffer, self.completion)
+    }
+
+    fn try_take_suggestion(&mut self) {
+        if let Some(suggestion) = self.suggestions.take().and_then(Suggestions::take) {
+            self.buffer = suggestion;
+        }
+    }
+}
+
+struct Suggestions {
+    index: Option<usize>,
+    options: Vec<Buffer>,
+}
+
+impl Suggestions {
+    fn new(options: &[String], direction: Direction) -> Self {
+        let index = match direction {
+            Direction::Forward => 0,
+            Direction::Backward => options.len() - 1,
+        };
+
+        Self {
+            options: options
+                .iter()
+                .map(|option| Buffer::from(option.as_str()))
+                .collect(),
+            index: Some(index),
+        }
+    }
+
+    // Allowed because it is more readable
+    #[allow(clippy::match_same_arms)]
+    fn cycle(&mut self, direction: Direction) {
+        use Direction::*;
+
+        let last_index = self.options.len() - 1;
+
+        self.index = match (direction, self.index) {
+            (Forward, None) => Some(0),
+            (Forward, Some(index)) if index < last_index => Some(index + 1),
+            (Forward, _) => None,
+            (Backward, None) => Some(last_index),
+            (Backward, Some(0)) => None,
+            (Backward, Some(index)) => Some(index - 1),
+        };
+    }
+
+    fn take(mut self) -> Option<Buffer> {
+        if let Some(index) = self.index {
+            Some(self.options.swap_remove(index))
+        } else {
+            None
         }
     }
 }

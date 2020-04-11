@@ -74,53 +74,31 @@ impl Writer {
 
     pub(super) fn print_suggestions(
         &mut self,
-        buffer: &Buffer,
-        suggestions: &[String],
-        suggestion: Option<usize>,
+        selected_index: usize,
+        suggestions: &[Buffer],
     ) -> Result<(), crate::ErrorKind> {
         use std::io::Write;
-
-        if suggestions.is_empty() {
-            return Ok(());
-        }
-
         let mut stdout = std::io::stdout();
 
         // Print buffer
-        if let Some(index) = suggestion {
-            let suggestion = Buffer::from(suggestions[index].as_str());
-            self.print_internal(&mut stdout, &suggestion, None, true)?;
-        } else {
-            self.print_internal(&mut stdout, &buffer, None, true)?;
-        }
+        self.print_internal(&mut stdout, &suggestions[selected_index], None, true)?;
 
         // Save position at the end of the buffer
         let end_of_buffer = crossterm::cursor::position().map(|pos| pos.0)?;
 
         // Print suggestions
-        if let Some(index) = suggestion {
-            for (i, suggestion) in suggestions.iter().enumerate() {
-                if i == index {
-                    use crossterm::style::Styler;
-                    crossterm::queue!(
-                        stdout,
-                        crossterm::style::Print('\n'),
-                        crossterm::cursor::MoveToColumn(0),
-                        crossterm::style::PrintStyledContent(
-                            crossterm::style::style(suggestion).bold()
-                        ),
-                    )?;
-                } else {
-                    crossterm::queue!(
-                        stdout,
-                        crossterm::style::Print('\n'),
-                        crossterm::cursor::MoveToColumn(0),
-                        crossterm::style::Print(suggestion),
-                    )?;
-                }
-            }
-        } else {
-            for suggestion in suggestions {
+        for (index, suggestion) in suggestions.iter().enumerate() {
+            if index == selected_index {
+                use crossterm::style::Styler;
+                crossterm::queue!(
+                    stdout,
+                    crossterm::style::Print('\n'),
+                    crossterm::cursor::MoveToColumn(0),
+                    crossterm::style::PrintStyledContent(
+                        crossterm::style::style(suggestion).bold()
+                    ),
+                )?;
+            } else {
                 crossterm::queue!(
                     stdout,
                     crossterm::style::Print('\n'),
@@ -130,10 +108,9 @@ impl Writer {
             }
         }
 
-        // Rewind cursor
+        // Rewind suggestions cursor
         for suggestion in suggestions.iter().rev() {
-            let length = suggestion.chars().count();
-            // TODO: rewinds will not go past a line break (if any in the completions)
+            let length = suggestion.len();
             rewind_cursor(&mut stdout, length)?;
             crossterm::queue!(stdout, crossterm::cursor::MoveUp(1))?;
         }
@@ -145,6 +122,8 @@ impl Writer {
             crossterm::cursor::MoveTo(end_of_buffer, bottom_of_buffer)
         )?;
         rewind_cursor(&mut stdout, self.cursor_offset)?;
+
+        // Execute
         crossterm::execute!(stdout)
     }
 }

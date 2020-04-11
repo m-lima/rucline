@@ -53,7 +53,7 @@ impl Prompt {
         self
     }
 
-    pub fn read_line(&self) -> Result<Option<String>, crate::ErrorKind> {
+    pub fn read_line(&mut self) -> Result<Option<String>, crate::ErrorKind> {
         let mut context = Context::new(
             self.erase_after_read,
             self.prompt.as_ref(),
@@ -69,11 +69,15 @@ impl Prompt {
                     Action::Delete(scope) => context.delete(scope)?,
                     Action::Move(range, direction) => context.move_cursor(range, direction)?,
                     Action::Complete(range) => context.complete(range)?,
-                    // TODO: insert tab if not suggester
                     Action::Suggest(direction) => context.suggest(direction)?,
                     Action::Noop => continue,
-                    // TODO: Cancel completion
-                    Action::Cancel => return Ok(None),
+                    Action::Cancel => {
+                        if context.is_suggesting() {
+                            context.cancel_suggestion()?;
+                        } else {
+                            return Ok(None);
+                        }
+                    }
                     Action::Accept => return Ok(Some(context.buffer_as_string())),
                 }
             }

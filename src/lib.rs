@@ -5,6 +5,10 @@
 #![allow(missing_docs)]
 
 // TODO: Support crossterm async
+// TODO: Support tabs and other variable width characters
+// TODO: Support buffers with line breaks (https://en.wikipedia.org/wiki/Newline#Unicode)
+// TODO: Investigate '\n' being parsed and 'ENTER'
+// TODO: Keep track of lines
 
 pub mod completer;
 pub mod key_bindings;
