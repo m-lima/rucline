@@ -1,7 +1,10 @@
-#![deny(warnings, clippy::pedantic)]
-#![allow(clippy::missing_errors_doc)]
-#![allow(clippy::find_map)]
+#![deny(warnings, missing_docs, clippy::pedantic, clippy::all)]
 #![warn(rust_2018_idioms)]
+// TODO: Remove these when ready
+#![allow(clippy::missing_errors_doc)]
+#![allow(missing_docs)]
+
+// TODO: Support crossterm async
 
 pub mod completer;
 pub mod key_bindings;
