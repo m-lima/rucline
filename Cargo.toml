@@ -17,3 +17,9 @@ serialize = [ "serde", "crossterm/serde" ]
 [dependencies]
 crossterm = "0.17"
 serde = { version = "1", features = [ "derive" ], optional = true }
+
+[package.metadata.docs.rs]
+all-features = true
+
+[package.metadata.playground]
+features = [ "serialize" ]
