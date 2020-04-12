@@ -169,8 +169,8 @@ impl std::ops::Deref for Buffer {
     }
 }
 
-impl std::convert::From<&str> for Buffer {
-    fn from(string: &str) -> Self {
+impl std::convert::From<&[char]> for Buffer {
+    fn from(string: &[char]) -> Self {
         let chars = CharString::from(string);
         let cursor = chars.len();
         Self { chars, cursor }

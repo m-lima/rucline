@@ -1,5 +1,12 @@
+// TODO: Consider impact of using &str instead of &[char] in public API for completions
+// TODO: Consider using lambdas instead of trait objects for completions
+
 pub trait Completer {
-    fn complete_for(&self, buffer: &[char]) -> Option<&[char]>;
+    fn complete_for(&self, context: &[char]) -> Option<&[char]>;
+}
+
+pub trait Suggester {
+    fn suggest_for(&self, context: &[char]) -> Vec<&[char]>;
 }
 
 pub struct Basic(Vec<Vec<char>>);
@@ -28,5 +35,11 @@ impl Completer for Basic {
                 .find(|completion| completion.starts_with(buffer))
                 .map(|completion| &completion[buffer.len()..])
         }
+    }
+}
+
+impl Suggester for Basic {
+    fn suggest_for(&self, _: &[char]) -> Vec<&[char]> {
+        self.0.iter().map(Vec::as_slice).collect::<Vec<_>>()
     }
 }

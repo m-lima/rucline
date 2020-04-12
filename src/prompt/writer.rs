@@ -1,5 +1,6 @@
 use super::{Buffer, CharString, CharStringView};
 
+// TODO: Keep track of lines (account for line breaks in CharString)
 pub(super) struct Writer {
     erase_on_drop: Option<usize>,
     printed_length: usize,
@@ -36,52 +37,43 @@ impl Writer {
         buffer: &Buffer,
         completion: Option<CharStringView<'_>>,
     ) -> Result<(), crate::ErrorKind> {
-        self.print_internal(&mut std::io::stdout(), buffer, completion, false)
-    }
-
-    fn print_internal(
-        &mut self,
-        stdout: &mut std::io::Stdout,
-        buffer: &Buffer,
-        completion: Option<CharStringView<'_>>,
-        transient: bool,
-    ) -> Result<(), crate::ErrorKind> {
         use std::io::Write;
+        let mut stdout = std::io::stdout();
 
-        clear_from(stdout, self.printed_length - self.cursor_offset)?;
+        clear_from(&mut stdout, self.printed_length - self.cursor_offset)?;
 
         self.cursor_offset = buffer.len() - buffer.cursor();
         self.printed_length = buffer.len();
 
-        crossterm::queue!(stdout, crossterm::style::Print(&buffer))?;
+        crossterm::queue!(&mut stdout, crossterm::style::Print(&buffer))?;
 
         if let Some(completion) = completion {
             use crossterm::style::Colorize;
             crossterm::queue!(
-                stdout,
+                &mut stdout,
                 crossterm::style::PrintStyledContent(crossterm::style::style(completion).blue())
             )?;
-            rewind_cursor(stdout, completion.len())?;
+            rewind_cursor(&mut stdout, completion.len())?;
         }
 
-        if transient {
-            Ok(())
-        } else {
-            rewind_cursor(stdout, self.cursor_offset)?;
-            crossterm::execute!(stdout)
-        }
+        rewind_cursor(&mut stdout, self.cursor_offset)?;
+        crossterm::execute!(&mut stdout)
     }
 
     pub(super) fn print_suggestions(
         &mut self,
         selected_index: usize,
-        suggestions: &[Buffer],
+        suggestions: &[CharStringView<'_>],
     ) -> Result<(), crate::ErrorKind> {
         use std::io::Write;
         let mut stdout = std::io::stdout();
 
         // Print buffer
-        self.print_internal(&mut stdout, &suggestions[selected_index], None, true)?;
+        let buffer = suggestions[selected_index];
+        clear_from(&mut stdout, self.printed_length - self.cursor_offset)?;
+        crossterm::queue!(stdout, crossterm::style::Print(buffer))?;
+        self.cursor_offset = buffer.len();
+        self.printed_length = buffer.len();
 
         // Save position at the end of the buffer
         let end_of_buffer = crossterm::cursor::position().map(|pos| pos.0)?;

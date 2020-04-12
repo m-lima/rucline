@@ -4,8 +4,7 @@ mod context;
 mod navigation;
 mod writer;
 
-use crate::completer::Completer;
-use crate::suggester::Suggester;
+use crate::completion::{Completer, Suggester};
 
 use buffer::Buffer;
 use char_string::{CharString, CharStringView};
@@ -53,6 +52,7 @@ impl Prompt {
         self
     }
 
+    // TODO: Support crossterm async
     pub fn read_line(&mut self) -> Result<Option<String>, crate::ErrorKind> {
         let mut context = Context::new(
             self.erase_after_read,

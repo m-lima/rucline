@@ -52,6 +52,7 @@ pub(super) fn action_for(
     }
 }
 
+// TODO: Investigate '\n' being parsed and 'ENTER'
 fn default_action(event: crossterm::event::KeyEvent) -> Action {
     use crossterm::event::KeyCode;
     use Action::*;

@@ -1,17 +1,15 @@
-use rucline::completer;
-use rucline::suggester;
+use rucline::completion;
 use rucline::Prompt;
 
 fn main() {
     if let Ok(Some(string)) = Prompt::new()
         .prompt("simple> ")
         .erase_after_read(true)
-        .completer(completer::Basic::new(&[
+        .completer(completion::Basic::new(&[
             "some programmer was here",
             "some developer was there",
-            "exit",
         ]))
-        .suggester(suggester::Basic::new(&[
+        .suggester(completion::Basic::new(&[
             "one suggestions here",
             "another one over there",
             "exit",

@@ -9,7 +9,7 @@ pub(super) struct Context<'a> {
     completer: &'a Option<Box<dyn Completer>>,
     completion: Option<CharStringView<'a>>,
     suggester: &'a Option<Box<dyn Suggester>>,
-    suggestions: Option<Suggestions>,
+    suggestions: Option<Suggestions<'a>>,
 }
 
 impl<'a> Context<'a> {
@@ -110,7 +110,10 @@ impl<'a> Context<'a> {
             } else {
                 let options = suggester.suggest_for(&self.buffer);
                 if !options.is_empty() {
-                    self.suggestions = Some(Suggestions::new(options, direction));
+                    self.suggestions = Some(Suggestions::new(
+                        options.into_iter().map(std::convert::Into::into).collect(),
+                        direction,
+                    ));
                     let suggestions = self.suggestions.as_ref().unwrap();
                     return self
                         .writer
@@ -138,23 +141,20 @@ impl<'a> Context<'a> {
     }
 }
 
-struct Suggestions {
+struct Suggestions<'a> {
     index: Option<usize>,
-    options: Vec<Buffer>,
+    options: Vec<CharStringView<'a>>,
 }
 
-impl Suggestions {
-    fn new(options: &[String], direction: Direction) -> Self {
+impl<'a> Suggestions<'a> {
+    fn new(options: Vec<CharStringView<'a>>, direction: Direction) -> Self {
         let index = match direction {
             Direction::Forward => 0,
             Direction::Backward => options.len() - 1,
         };
 
         Self {
-            options: options
-                .iter()
-                .map(|option| Buffer::from(option.as_str()))
-                .collect(),
+            options,
             index: Some(index),
         }
     }
@@ -178,7 +178,7 @@ impl Suggestions {
 
     fn take(mut self) -> Option<Buffer> {
         if let Some(index) = self.index {
-            Some(self.options.swap_remove(index))
+            Some(Buffer::from(self.options.swap_remove(index).as_slice()))
         } else {
             None
         }

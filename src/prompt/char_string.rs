@@ -1,3 +1,5 @@
+// TODO: Support tabs and other variable width characters
+// TODO: Support buffers with line breaks (https://en.wikipedia.org/wiki/Newline#Unicode)
 pub(super) struct CharString(Vec<char>);
 
 impl CharString {
@@ -96,6 +98,12 @@ impl std::fmt::Display for CharString {
 
 #[derive(Copy, Clone)]
 pub(super) struct CharStringView<'a>(&'a [char]);
+
+impl CharStringView<'_> {
+    pub(super) fn as_slice(&self) -> &[char] {
+        self.0
+    }
+}
 
 impl<'a> std::convert::From<&'a [char]> for CharStringView<'a> {
     fn from(data: &'a [char]) -> Self {
