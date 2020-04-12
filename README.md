@@ -5,14 +5,15 @@
 [![Documentation](https://docs.rs/rucline/badge.svg)](https://docs.rs/rucline)
 
 ![demo](docs/demo.gif)
+*Code for example available at* [examples/multiple.rs](blob/master/examples/multiple.rs)
 
 Rucline (Rust CLI line /rɪˈklaɪn/) is a cross-platform, UTF-8 aware, advanced edtigin,
 autocompletion capable, tab suggestion supporting line reader you can "recline" on.
 
-It provides advanced editing **actions** for user input and customization of the line
+It provides advanced editing [`actions`] for user input and customization of the line
 reader.
 
-It uses **crossterm** as a backend to provide cross-platform support, and provides advanced
+It uses [`crossterm`] as a backend to provide cross-platform support, and provides advanced
 
 #### Basic usage:
 
@@ -21,7 +22,7 @@ use rucline::completion;
 use rucline::Prompt;
 
 if let Ok(Some(string)) = Prompt::new()
-    // Create a bold prompt
+    // Add a prompt question
     .prompt("What's you favorite website? ")
     // Add some likely values as completions
     .completer(completion::Basic::new(&[
@@ -43,7 +44,7 @@ if let Ok(Some(string)) = Prompt::new()
 
 ## Actions
 
-Rucline allow advanced **actions** for interacting with the **Prompt**, but it
+Rucline allow advanced [`actions`] for interacting with the [`Prompt`], but it
 comes built-in with useful behavior. For example, a few of the build-ins:
 * `Tab`: cycle through completions
 * `Shift` + `Tab`: cycle through completions in reverse
@@ -54,9 +55,9 @@ comes built-in with useful behavior. For example, a few of the build-ins:
 * `CTRL` + `H`: delete the beggining of the line
 * `CTRL` + `L`: delete the end of the line
 
-**See `Action` for the full default behavior**
+**See [`Action`][`actions`] for the full default behavior**
 
-The behavior can be customized by overriding user **events** with **actions**. Which
+The behavior can be customized by overriding user [`events`] with [`actions`]. Which
 in turn can be serialized, stored, and loaded at run-time.
 
 
@@ -89,3 +90,9 @@ if let Ok(Some(string)) = Prompt::new()
     println!("'{}' seems to be your favorite website", string);
 }
 ```
+
+[`crossterm`]: https://docs.rs/crossterm/
+[`KeyBindings`]: blob/master/src/key_bindings.rs
+[`actions`]: blob/master/src/key_bindings.rs
+[`events`]: blob/master/src/key_bindings.rs
+[`prompt`]: blob/master/src/prompt/mod.rs
