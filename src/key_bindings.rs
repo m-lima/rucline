@@ -242,22 +242,34 @@ mod test {
 
     #[test]
     fn should_default_if_no_mapping() {
-        let action = action_for(None, crossterm::event::KeyEvent::from(crossterm::event::KeyCode::Tab));
+        let action = action_for(
+            None,
+            crossterm::event::KeyEvent::from(crossterm::event::KeyCode::Tab),
+        );
         assert_eq!(action, Action::Suggest(Direction::Forward));
     }
 
     #[test]
     fn should_default_if_event_missing_form_mapping() {
         let bindings = KeyBindings::new();
-        let action = action_for(Some(&bindings), crossterm::event::KeyEvent::from(crossterm::event::KeyCode::Tab));
+        let action = action_for(
+            Some(&bindings),
+            crossterm::event::KeyEvent::from(crossterm::event::KeyCode::Tab),
+        );
         assert_eq!(action, Action::Suggest(Direction::Forward));
     }
 
     #[test]
     fn should_override_if_defined() {
         let mut bindings = KeyBindings::new();
-        bindings.insert(crossterm::event::KeyEvent::from(crossterm::event::KeyCode::Tab), Action::Write('\t'));
-        let action = action_for(Some(&bindings), crossterm::event::KeyEvent::from(crossterm::event::KeyCode::Tab));
+        bindings.insert(
+            crossterm::event::KeyEvent::from(crossterm::event::KeyCode::Tab),
+            Action::Write('\t'),
+        );
+        let action = action_for(
+            Some(&bindings),
+            crossterm::event::KeyEvent::from(crossterm::event::KeyCode::Tab),
+        );
         assert_eq!(action, Action::Write('\t'));
     }
 }

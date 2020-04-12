@@ -1,3 +1,5 @@
+// TODO: Add more characters to word separation
+
 pub(super) fn next_word(pivot: usize, string: &[char]) -> usize {
     let end = string.len();
     if pivot == end {

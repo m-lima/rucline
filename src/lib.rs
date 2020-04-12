@@ -8,7 +8,6 @@ pub mod completion;
 pub mod key_bindings;
 pub mod prompt;
 
-pub use completion::*;
 pub use prompt::Prompt;
 
 pub use crossterm::ErrorKind;
