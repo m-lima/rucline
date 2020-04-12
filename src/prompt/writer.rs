@@ -72,7 +72,7 @@ impl Writer {
         let buffer = suggestions[selected_index];
         clear_from(&mut stdout, self.printed_length - self.cursor_offset)?;
         crossterm::queue!(stdout, crossterm::style::Print(buffer))?;
-        self.cursor_offset = buffer.len();
+        self.cursor_offset = 0;
         self.printed_length = buffer.len();
 
         // Save position at the end of the buffer

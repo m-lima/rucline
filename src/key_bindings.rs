@@ -109,7 +109,7 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-/// Alias to `crossterm::event::KeyEvent` form [`crossterm`](https://docs.rs/crossterm/)
+/// Alias to `crossterm::event::KeyEvent` from [`crossterm`](https://docs.rs/crossterm/)
 pub type Event = crossterm::event::KeyEvent;
 
 /// Alias to [`HashMap<Event, Action>`](std::collections::HashMap)

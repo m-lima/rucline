@@ -74,6 +74,12 @@ impl std::convert::From<&str> for CharString {
     }
 }
 
+impl std::convert::From<String> for CharString {
+    fn from(data: String) -> Self {
+        Self(data.chars().collect())
+    }
+}
+
 impl std::convert::From<&[char]> for CharString {
     fn from(data: &[char]) -> Self {
         Self(data.iter().map(Clone::clone).collect())

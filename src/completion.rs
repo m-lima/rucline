@@ -4,11 +4,8 @@
 //! Provides completion methods for [`Prompt`] when reading lines.
 //!
 //! By default, no completions are performed upon user interaction. However, if a [`Completer`]
-//! or a [`Suggester`] are provded, the [`Prompt`] will query for completions for the current
+//! or a [`Suggester`] are provided, the [`Prompt`] will query for completions for the current
 //! state of the line.
-//!
-//! [`Completer`] completes the lines as it is edited. It will append
-//! [`Suggester`] gives options for replacing the whole line. Usually associated with the TAB key.
 //!
 //! [`Prompt`]: ../prompt/struct.Prompt.html
 //! [`Completer`]: trait.Completer.html
@@ -57,7 +54,8 @@ pub trait Completer {
     fn complete_for(&self, context: &[char]) -> Option<&[char]>;
 }
 
-/// Generates a list of possible values for the [`Prompt`] buffer.
+/// Generates a list of possible values for the [`Prompt`] buffer, usually associated with the
+/// Tab` key.
 ///
 /// Whenever the [`Suggest`] action is triggered,  the [`Prompt`] will ask the
 /// `Suggester` for a list of values to **replace** to the current buffer.
@@ -72,7 +70,7 @@ pub trait Completer {
 /// [`Delete`]: ../key_bindings/enum.Action.html#variant.Delete
 /// [`Move`]: ../key_bindings/enum.Action.html#variant.Move
 /// [`Accept`]: ../key_bindings/enum.Action.html#variant.Accept
-/// [`Complete`]: ../key_bindings/enum.Action.html#variant.Complete
+/// [`Suggest`]: ../key_bindings/enum.Action.html#variant.Suggest
 pub trait Suggester {
     /// Whenever the [`Suggest`] action is triggered,  the [`Prompt`] will ask the
     /// `Suggester` for a list of values to **replace** to the current buffer.

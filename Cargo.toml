@@ -7,7 +7,7 @@ readme = "README.md"
 keywords = ["cli", "repl", "terminal", "color"]
 repository = "https://github.com/m-lima/rucline"
 categories = ["command-line-interface", "command-line-utilities"]
-description = "Pwner is a Process Owner crate that allows ergonomic access to child processes"
+description = "A cross-platform, UTF-8 aware, autocompletion capable, tab suggestion supporting, color rendering line reader you can 'recline' on."
 license = "MIT"
 
 [features]
@@ -17,6 +17,10 @@ serialize = [ "serde", "crossterm/serde" ]
 [dependencies]
 crossterm = "0.17"
 serde = { version = "1", features = [ "derive" ], optional = true }
+
+[dev-dependencies]
+colored = "1.9"
+pwner = "*"
 
 [package.metadata.docs.rs]
 all-features = true

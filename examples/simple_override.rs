@@ -1,8 +1,14 @@
 use colored::Colorize;
-use rucline::completion;
-use rucline::Prompt;
+use crossterm::event::KeyCode;
+use rucline::key_bindings::{Action, Event, KeyBindings, Range};
+use rucline::{completion, Prompt};
 
 fn main() {
+    let mut bindings = KeyBindings::new();
+
+    // Accept the full suggestions if `right` is pressed
+    bindings.insert(Event::from(KeyCode::Right), Action::Complete(Range::Line));
+
     if let Ok(Some(string)) = Prompt::new()
         // Create a bold prompt
         .prompt(&"What's you favorite website? ".bold())
@@ -12,11 +18,8 @@ fn main() {
             "https://docs.rs/",
             "https://crates.io/",
         ]))
-        // Add some tab completions
-        .suggester(completion::Basic::new(&[
-            "https://www.startpage.com/",
-            "https://www.google.com/",
-        ]))
+        // Override the `right` key to always fill the full suggestions line
+        .bindings(bindings)
         //Block until value is ready
         .read_line()
     {

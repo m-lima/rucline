@@ -1,3 +1,5 @@
+//! Bla
+
 mod buffer;
 mod char_string;
 mod context;
@@ -13,6 +15,10 @@ use writer::Writer;
 
 use crate::key_bindings::{action_for, Action, Direction, KeyBindings, Range, Scope};
 
+/// A configurable prompt for reading lines from [`stdin`](std::io::Stdin)
+///
+/// **Note:**
+/// Must be attached to tty to function
 pub struct Prompt {
     erase_after_read: bool,
     prompt: Option<CharString>,
@@ -22,38 +28,45 @@ pub struct Prompt {
 }
 
 impl Prompt {
+    /// Bla
     #[must_use]
     pub fn new() -> Self {
         Prompt::default()
     }
 
-    pub fn erase_after_read(&mut self, erase_after_read: bool) -> &mut Self {
+    /// Bla
+    pub fn erase_after_read(mut self, erase_after_read: bool) -> Self {
         self.erase_after_read = erase_after_read;
         self
     }
 
-    pub fn prompt(&mut self, prompt: &str) -> &mut Self {
-        self.prompt = Some(prompt.into());
+    /// Bla
+    pub fn prompt<P: ToString>(mut self, prompt: &P) -> Self {
+        self.prompt = Some(prompt.to_string().into());
         self
     }
 
-    pub fn bindings(&mut self, bindings: KeyBindings) -> &mut Self {
+    /// Bla
+    pub fn bindings(mut self, bindings: KeyBindings) -> Self {
         self.bindings = Some(bindings);
         self
     }
 
-    pub fn completer(&mut self, completer: impl Completer + 'static) -> &mut Self {
+    /// Bla
+    pub fn completer(mut self, completer: impl Completer + 'static) -> Self {
         self.completer = Some(Box::new(completer));
         self
     }
 
-    pub fn suggester(&mut self, suggester: impl Suggester + 'static) -> &mut Self {
+    /// Bla
+    pub fn suggester(mut self, suggester: impl Suggester + 'static) -> Self {
         self.suggester = Some(Box::new(suggester));
         self
     }
 
+    /// Bla
     // TODO: Support crossterm async
-    pub fn read_line(&mut self) -> Result<Option<String>, crate::ErrorKind> {
+    pub fn read_line(&self) -> Result<Option<String>, crate::ErrorKind> {
         let mut context = Context::new(
             self.erase_after_read,
             self.prompt.as_ref(),
