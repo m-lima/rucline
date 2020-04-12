@@ -24,9 +24,7 @@ fn main() {
         .completer(Basic::new(&command_history));
 
     if let Ok(Some(command)) = prompt.read_line() {
-
         if possible_commands.contains(&command.as_str()) {
-
             // Accept command and show sub prompt
             if let Ok(Some(mode)) = Prompt::new()
                 .prompt(&format!(
@@ -41,7 +39,6 @@ fn main() {
                 println!("Ok! Will {} {}", command, mode);
             }
         } else {
-
             // Command not recognized
             eprintln!("{} invalid command", "Error".red());
         }
