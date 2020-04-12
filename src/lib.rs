@@ -18,7 +18,7 @@
 //! use rucline::Prompt;
 //!
 //! if let Ok(Some(string)) = Prompt::new()
-//!     // Create a bold prompt
+//!     // Add a prompt question
 //!     .prompt("What's you favorite website? ")
 //!     // Add some likely values as completions
 //!     .completer(completion::Basic::new(&[
