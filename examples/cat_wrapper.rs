@@ -30,7 +30,7 @@ fn main() {
         // Write the line into cat
         cat.write_all(input.as_bytes())
             .expect("Could not write to 'cat'");
-        cat.write(&[b'\n']).expect("Could not flush 'cat'");
+        cat.write_all(&[b'\n']).expect("Could not flush 'cat'");
 
         // Read from cat and print
         let bytes = cat.read(&mut buffer).expect("Could not read from 'cat'");

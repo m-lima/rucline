@@ -1,5 +1,3 @@
-//! Bla
-
 mod buffer;
 mod char_string;
 mod context;
@@ -15,10 +13,6 @@ use writer::Writer;
 
 use crate::key_bindings::{action_for, Action, Direction, KeyBindings, Range, Scope};
 
-/// A configurable prompt for reading lines from [`stdin`](std::io::Stdin)
-///
-/// **Note:**
-/// Must be attached to tty to function
 pub struct Prompt {
     erase_after_read: bool,
     prompt: Option<CharString>,
@@ -28,43 +22,41 @@ pub struct Prompt {
 }
 
 impl Prompt {
-    /// Bla
     #[must_use]
     pub fn new() -> Self {
         Prompt::default()
     }
 
-    /// Bla
+    #[must_use]
     pub fn erase_after_read(mut self, erase_after_read: bool) -> Self {
         self.erase_after_read = erase_after_read;
         self
     }
 
-    /// Bla
+    #[must_use]
     pub fn prompt<P: ToString>(mut self, prompt: &P) -> Self {
         self.prompt = Some(prompt.to_string().into());
         self
     }
 
-    /// Bla
+    #[must_use]
     pub fn bindings(mut self, bindings: KeyBindings) -> Self {
         self.bindings = Some(bindings);
         self
     }
 
-    /// Bla
+    #[must_use]
     pub fn completer(mut self, completer: impl Completer + 'static) -> Self {
         self.completer = Some(Box::new(completer));
         self
     }
 
-    /// Bla
+    #[must_use]
     pub fn suggester(mut self, suggester: impl Suggester + 'static) -> Self {
         self.suggester = Some(Box::new(suggester));
         self
     }
 
-    /// Bla
     // TODO: Support crossterm async
     pub fn read_line(&self) -> Result<Option<String>, crate::ErrorKind> {
         let mut context = Context::new(

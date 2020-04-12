@@ -6,8 +6,8 @@
 
 ![demo](docs/demo.gif)
 
-Rucline is a cross-platform, UTF-8 aware, autocompletion capable, tab suggestion supporting,
-color rendering line reader you can "recline" on.
+Rucline (Rust CLI line /rɪˈklaɪn/) is a cross-platform, UTF-8 aware, advanced edtigin,
+autocompletion capable, tab suggestion supporting line reader you can "recline" on.
 
 It provides advanced editing **actions** for user input and customization of the line
 reader.

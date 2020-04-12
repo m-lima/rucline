@@ -1,8 +1,10 @@
 #![deny(warnings, missing_docs, clippy::pedantic, clippy::all)]
 #![warn(rust_2018_idioms)]
+// TDO: Remove when ready
+#![allow(missing_docs, clippy::missing_errors_doc)]
 
-//! Rucline is a cross-platform, UTF-8 aware, autocompletion capable, tab suggestion supporting,
-//! color rendering line reader you can "recline" on.
+//! Rucline (Rust CLI line /rɪˈklaɪn/) is a cross-platform, UTF-8 aware, advanced edtigin,
+//! autocompletion capable, tab suggestion supporting line reader you can "recline" on.
 //!
 //! It provides advanced editing [`actions`] for user input and customization of the line
 //! reader.

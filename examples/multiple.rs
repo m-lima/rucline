@@ -8,7 +8,13 @@ fn main() {
 
     // Simulate a history of previous inputs
     let command_history = vec!["run", "fly"];
-    let mode_history = vec!["slow", "fast", "normal", "very slowly almost stopping", "very quickly almost lightspeed"];
+    let mode_history = vec![
+        "slow",
+        "fast",
+        "normal",
+        "very slowly almost stopping",
+        "very quickly almost lightspeed",
+    ];
 
     let prompt = Prompt::new()
         .erase_after_read(true)
