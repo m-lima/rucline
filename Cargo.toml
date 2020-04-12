@@ -20,7 +20,7 @@ serde = { version = "1", features = [ "derive" ], optional = true }
 
 [dev-dependencies]
 colored = "1.9"
-pwner = "*"
+pwner = "0.1"
 
 [package.metadata.docs.rs]
 all-features = true
