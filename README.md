@@ -5,7 +5,7 @@
 [![Documentation](https://docs.rs/rucline/badge.svg)](https://docs.rs/rucline)
 
 ![demo](docs/demo.gif)
-*Code for example available at* [examples/multiple.rs](../blob/master/examples/multiple.rs)
+*Code for example available at* [examples/multiple.rs](../../blob/master/examples/multiple.rs)
 
 Rucline (Rust CLI line /rɪˈklaɪn/) is a cross-platform, UTF-8 aware, advanced edtigin,
 autocompletion capable, tab suggestion supporting line reader you can "recline" on.
@@ -92,7 +92,7 @@ if let Ok(Some(string)) = Prompt::new()
 ```
 
 [`crossterm`]: https://docs.rs/crossterm/
-[`KeyBindings`]: ../blob/master/src/key_bindings.rs
-[`actions`]: ../blob/master/src/key_bindings.rs
-[`events`]: ../blob/master/src/key_bindings.rs
-[`prompt`]: ../blob/master/src/prompt/mod.rs
+[`KeyBindings`]: ../../blob/master/src/key_bindings.rs
+[`actions`]: ../../blob/master/src/key_bindings.rs
+[`events`]: ../../blob/master/src/key_bindings.rs
+[`prompt`]: ../../blob/master/src/prompt/mod.rs
