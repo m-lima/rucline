@@ -57,7 +57,7 @@
 //! In the absence of [`KeyBindings`] or an entry for a given [`Event`], the default behavior
 //! will be as follows:
 //!
-//! ```ignore
+//! ```no_run
 //! KeyCode::Enter => Accept,
 //! KeyCode::Esc => Cancel,
 //! KeyCode::Tab => Suggest(Forward),
