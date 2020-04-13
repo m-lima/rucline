@@ -9,9 +9,8 @@ use char_string::{CharString, CharStringView};
 use context::Context;
 use writer::Writer;
 
+use crate::actions::{action_for, Action, Direction, Overrider, Range, Scope};
 use crate::completion::{Completer, Suggester};
-use crate::key_bindings::{action_for, Action, Direction, Overrider, Range, Scope};
-// use crate::key_bindings::{action_for, Action, Direction, Event, Range, Scope};
 
 pub struct Prompt {
     erase_after_read: bool,

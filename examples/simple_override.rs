@@ -1,6 +1,6 @@
 use colored::Colorize;
 use crossterm::event::KeyCode;
-use rucline::key_bindings::{Action, Event, KeyBindings, Range};
+use rucline::actions::{Action, Event, KeyBindings, Range};
 use rucline::{completion, Prompt};
 
 fn main() {

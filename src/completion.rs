@@ -20,9 +20,9 @@
 /// must be issued to incorporate the completion into the buffer.
 ///
 /// [`Prompt`]: ../prompt/struct.Prompt.html
-/// [`Write`]: ../key_bindings/enum.Action.html#variant.Write
-/// [`Delete`]: ../key_bindings/enum.Action.html#variant.Delete
-/// [`Complete`]: ../key_bindings/enum.Action.html#variant.Complete
+/// [`Write`]: ../actions/enum.Action.html#variant.Write
+/// [`Delete`]: ../actions/enum.Action.html#variant.Delete
+/// [`Complete`]: ../actions/enum.Action.html#variant.Complete
 pub trait Completer {
     /// Whenever the line is edited, e.g. [`Write`] or [`Delete`], the [`Prompt`] will ask the
     /// [`Completer`] for a possible completion to **append** to the current buffer.
@@ -66,11 +66,11 @@ pub trait Completer {
 /// [`Delete`], [`Accept`] or a [`Move`], while a suggestion is selected.
 ///
 /// [`Prompt`]: ../prompt/struct.Prompt.html
-/// [`Write`]: ../key_bindings/enum.Action.html#variant.Write
-/// [`Delete`]: ../key_bindings/enum.Action.html#variant.Delete
-/// [`Move`]: ../key_bindings/enum.Action.html#variant.Move
-/// [`Accept`]: ../key_bindings/enum.Action.html#variant.Accept
-/// [`Suggest`]: ../key_bindings/enum.Action.html#variant.Suggest
+/// [`Write`]: ../actions/enum.Action.html#variant.Write
+/// [`Delete`]: ../actions/enum.Action.html#variant.Delete
+/// [`Move`]: ../actions/enum.Action.html#variant.Move
+/// [`Accept`]: ../actions/enum.Action.html#variant.Accept
+/// [`Suggest`]: ../actions/enum.Action.html#variant.Suggest
 pub trait Suggester {
     /// Whenever the [`Suggest`] action is triggered,  the [`Prompt`] will ask the
     /// `Suggester` for a list of values to **replace** to the current buffer.

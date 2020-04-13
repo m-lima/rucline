@@ -58,7 +58,7 @@ in turn can be serialized, stored, and loaded at run-time.
 
 ```rust
 use rucline::{completion, Prompt};
-use rucline::key_bindings::{Action, Event, KeyBindings, Range};
+use rucline::actions::{Action, Event, KeyBindings, Range};
 use crossterm::event::KeyCode;
 
 let mut bindings = KeyBindings::new();
@@ -87,7 +87,7 @@ if let Ok(Some(string)) = Prompt::from("What's you favorite website? ")
 
 
 [`crossterm`]: https://docs.rs/crossterm/
-[`KeyBindings`]: ../../blob/master/src/key_bindings.rs
-[`actions`]: ../../blob/master/src/key_bindings.rs
-[`events`]: ../../blob/master/src/key_bindings.rs
+[`KeyBindings`]: ../../blob/master/src/actions.rs
+[`actions`]: ../../blob/master/src/actions.rs
+[`events`]: ../../blob/master/src/actions.rs
 [`prompt`]: ../../blob/master/src/prompt/mod.rs

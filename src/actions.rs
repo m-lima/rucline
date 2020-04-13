@@ -13,7 +13,7 @@
 //!
 //! ```
 //! use rucline::Prompt;
-//! use rucline::key_bindings::{Action, Event, KeyBindings};
+//! use rucline::actions::{Action, Event, KeyBindings};
 //! use crossterm::event::KeyCode;
 //!
 //! let mut bindings = KeyBindings::new();
@@ -24,7 +24,7 @@
 //!
 //! ```
 //! use rucline::Prompt;
-//! use rucline::key_bindings::{Action, Event, KeyBindings};
+//! use rucline::actions::{Action, Event, KeyBindings};
 //! use crossterm::event::KeyCode;
 //!
 //! let prompt = Prompt::new().overrider(|e| if e == Event::from(KeyCode::Tab) {
@@ -40,7 +40,7 @@
 //! between [`Event`] and [`Action`] which will override the default behavior.
 //!
 //! ```
-//! use rucline::key_bindings::{Action, Event, KeyBindings};
+//! use rucline::actions::{Action, Event, KeyBindings};
 //! use crossterm::event::KeyCode;
 //!
 //! let mut bindings = KeyBindings::new();
@@ -53,7 +53,7 @@
 //! set as the override.
 //!
 //! ```
-//! use rucline::key_bindings::{Action, Event, KeyBindings};
+//! use rucline::actions::{Action, Event, KeyBindings};
 //! use crossterm::event::KeyCode;
 //!
 //! let mut bindings = KeyBindings::new();
@@ -71,9 +71,9 @@
 //! will be as follows:
 //!
 //! ```no_run
-//! # fn default_action(event: rucline::key_bindings::Event) -> rucline::key_bindings::Action {
+//! # fn default_action(event: rucline::actions::Event) -> rucline::actions::Action {
 //! # use crossterm::event::KeyCode;
-//! # use rucline::key_bindings::{Action::*, Direction::*, Range::*, Scope::* };
+//! # use rucline::actions::{Action::*, Direction::*, Range::*, Scope::* };
 //! # match event.code {
 //! KeyCode::Enter => Accept,
 //! KeyCode::Esc => Cancel,

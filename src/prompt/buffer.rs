@@ -1,4 +1,4 @@
-use crate::key_bindings::{Direction, Range, Scope};
+use crate::actions::{Direction, Range, Scope};
 
 use super::CharString;
 
@@ -75,7 +75,7 @@ impl Buffer {
         self.cursor += string.len();
     }
 
-    /// Deletes the given [`scope`](../../key_bindings/enum.Scope.html) from this buffer
+    /// Deletes the given [`scope`](../../actions/enum.Scope.html) from this buffer
     /// and updates the cursor accordingly.
     pub(super) fn delete(&mut self, scope: Scope) {
         use Direction::*;
@@ -126,7 +126,7 @@ impl Buffer {
         }
     }
 
-    /// Moves the cursor by [`range`](../../key_bindings/enum.Range.html)
+    /// Moves the cursor by [`range`](../../actions/enum.Range.html)
     pub(super) fn move_cursor(&mut self, range: Range, direction: Direction) {
         use Direction::*;
         use Range::*;

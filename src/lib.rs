@@ -3,7 +3,6 @@
 // TDO: Remove when ready
 #![allow(missing_docs, clippy::missing_errors_doc)]
 // TODO: update when Prompt is updated
-// TODO: update when key_bindings is updated
 // TODO: hooks section
 
 //! Rucline, the Rust CLI Line reader, or simply "recline", is a cross-platform, UTF-8 compatible
@@ -57,7 +56,7 @@
 //!
 //! ```no_run
 //! use rucline::{completion, Prompt};
-//! use rucline::key_bindings::{Action, Event, KeyBindings, Range};
+//! use rucline::actions::{Action, Event, KeyBindings, Range};
 //! use crossterm::event::KeyCode;
 //!
 //! let mut bindings = KeyBindings::new();
@@ -86,16 +85,14 @@
 //!
 //!
 //! [`crossterm`]: https://docs.rs/crossterm/
-//! [`KeyBindings`]: key_bindings/index.html
-//! [`actions`]: key_bindings/enum.Action.html
-//! [`events`]: key_bindings/type.Event.html
+//! [`KeyBindings`]: actions/index.html
+//! [`actions`]: actions/enum.Action.html
+//! [`events`]: actions/type.Event.html
 //! [`prompt`]: prompt/index.html
+pub mod actions;
 pub mod completion;
-pub mod key_bindings;
 pub mod prompt;
 
 pub use prompt::Prompt;
 
 pub use crossterm::ErrorKind;
-
-// TODO: rename `key_bindings`
