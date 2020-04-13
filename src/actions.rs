@@ -24,10 +24,10 @@
 //!
 //! ```
 //! use rucline::Prompt;
-//! use rucline::actions::{Action, Event, KeyBindings};
+//! use rucline::actions::{Action, Context, Event, KeyBindings};
 //! use crossterm::event::KeyCode;
 //!
-//! let prompt = Prompt::new().overrider(|e| if e == Event::from(KeyCode::Tab) {
+//! let prompt = Prompt::new().overrider(|e, _: &dyn Context| if e == Event::from(KeyCode::Tab) {
 //!     Some(Action::Write('\t'))
 //! } else {
 //!     None
@@ -124,7 +124,7 @@
 //! [`Action`]: enum.Action.html
 //! [`Noop`]: enum.Action.html#variant.Noop
 
-use crate::prompt::Context;
+pub use crate::prompt::Context;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -193,23 +193,23 @@ pub enum Direction {
     Backward,
 }
 
-// TODO: Send context to Overrider (andpossibly remove the "Complete" from the Move in Context)
+// TODO: Wanr about the lifetime of Context (if being ignored)
 pub trait Overrider {
-    fn override_for(&self, event: Event) -> Option<Action>;
+    fn override_for(&self, event: Event, context: &dyn Context) -> Option<Action>;
 }
 
 impl Overrider for KeyBindings {
-    fn override_for(&self, event: Event) -> Option<Action> {
+    fn override_for(&self, event: Event, _: &dyn Context) -> Option<Action> {
         self.get(&event).copied()
     }
 }
 
 impl<F> Overrider for F
 where
-    F: Fn(Event) -> Option<Action>,
+    F: Fn(Event, &dyn Context) -> Option<Action>,
 {
-    fn override_for(&self, event: Event) -> Option<Action> {
-        self(event)
+    fn override_for(&self, event: Event, context: &dyn Context) -> Option<Action> {
+        self(event, context)
     }
 }
 
@@ -218,7 +218,10 @@ pub(super) fn action_for(
     event: Event,
     context: &impl Context,
 ) -> Action {
-    if let Some(action) = overrides.as_ref().and_then(|b| b.override_for(event)) {
+    if let Some(action) = overrides
+        .as_ref()
+        .and_then(|b| b.override_for(event, context))
+    {
         action
     } else {
         default_action(event, context)
@@ -394,14 +397,14 @@ mod test {
 
         #[test]
         fn should_default_if_event_missing_form_mapping() {
-            let overrider = Box::new(|_| None);
+            let overrider = Box::new(|_, _: &dyn Context| None);
             let action = action_for(&Some(overrider), Event::from(Tab), &ContextMock(false));
             assert_eq!(action, Action::Suggest(Direction::Forward));
         }
 
         #[test]
         fn should_override_if_defined() {
-            let overrider = Box::new(|e| {
+            let overrider = Box::new(|e, _: &dyn Context| {
                 if e == Event::from(Tab) {
                     Some(Action::Write('\t'))
                 } else {
