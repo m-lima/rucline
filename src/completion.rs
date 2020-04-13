@@ -11,6 +11,8 @@
 //! [`Completer`]: trait.Completer.html
 //! [`Suggester`]: trait.Suggester.html
 
+pub use crate::Context;
+
 /// Completes the buffer in-line.
 ///
 /// Whenever the line is edited, e.g. [`Write`] or [`Delete`], the [`Prompt`] will ask the
@@ -34,14 +36,15 @@ pub trait Completer {
     /// ```no_run
     /// # struct Basic(Vec<Vec<char>>);
     /// # impl rucline::completion::Completer for Basic {
-    /// fn complete_for(&self, context: &[char]) -> Option<&[char]> {
-    ///     if context.is_empty() {
+    /// fn complete_for(&self, context: &dyn rucline::Context) -> Option<&[char]> {
+    ///     let buffer = context.buffer();
+    ///     if buffer.is_empty() {
     ///         None
     ///     } else {
     ///         self.0
     ///             .iter()
-    ///             .find(|completion| completion.starts_with(context))
-    ///             .map(|completion| &completion[context.len()..])
+    ///             .find(|completion| completion.starts_with(buffer))
+    ///             .map(|completion| &completion[buffer.len()..])
     ///     }
     /// }
     /// # }
@@ -51,7 +54,7 @@ pub trait Completer {
     ///
     /// [`Completer`]: trait.Completer.html
     /// [`Basic`]: struct.Basic.html#implementations
-    fn complete_for(&self, context: &[char]) -> Option<&[char]>;
+    fn complete_for(&self, context: &dyn Context) -> Option<&[char]>;
 }
 
 /// Generates a list of possible values for the [`Prompt`] buffer, usually associated with the
@@ -82,7 +85,7 @@ pub trait Suggester {
     /// ```no_run
     /// # struct Basic(Vec<Vec<char>>);
     /// # impl rucline::completion::Suggester for Basic {
-    ///  fn suggest_for(&self, _: &[char]) -> Vec<&[char]> {
+    ///  fn suggest_for(&self, _: &dyn rucline::Context) -> Vec<&[char]> {
     ///     self.0.iter().map(Vec::as_slice).collect::<Vec<_>>()
     /// }
     /// # }
@@ -92,7 +95,7 @@ pub trait Suggester {
     ///
     /// [`Completer`]: trait.Completer.html
     /// [`Basic`]: struct.Basic.html#implementations
-    fn suggest_for(&self, context: &[char]) -> Vec<&[char]>;
+    fn suggest_for(&self, context: &dyn Context) -> Vec<&[char]>;
 }
 
 /// A basic implementation of a completion provider serving both as an example and as a useful
@@ -127,20 +130,21 @@ impl Basic {
 impl Completer for Basic {
     // Allowed because it is more readable this way
     #[allow(clippy::find_map)]
-    fn complete_for(&self, context: &[char]) -> Option<&[char]> {
-        if context.is_empty() {
+    fn complete_for(&self, context: &dyn Context) -> Option<&[char]> {
+        let buffer = context.buffer();
+        if buffer.is_empty() {
             None
         } else {
             self.0
                 .iter()
-                .find(|completion| completion.starts_with(context))
-                .map(|completion| &completion[context.len()..])
+                .find(|completion| completion.starts_with(buffer))
+                .map(|completion| &completion[buffer.len()..])
         }
     }
 }
 
 impl Suggester for Basic {
-    fn suggest_for(&self, _: &[char]) -> Vec<&[char]> {
+    fn suggest_for(&self, _: &dyn Context) -> Vec<&[char]> {
         self.0.iter().map(Vec::as_slice).collect::<Vec<_>>()
     }
 }
@@ -148,32 +152,32 @@ impl Suggester for Basic {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::mock::Context as Mock;
 
     #[test]
     fn should_not_complete_if_empty() {
         let basic = Basic::new(&["some programmer was here", "some developer was there"]);
-        assert_eq!(basic.complete_for(&[]), None);
+        assert_eq!(basic.complete_for(&Mock::empty()), None);
     }
 
     #[test]
     fn should_not_complete_if_context_is_different() {
         let basic = Basic::new(&["some programmer was here", "some developer was there"]);
-        assert_eq!(basic.complete_for(&['a']), None);
+        assert_eq!(basic.complete_for(&Mock::from("a")), None);
     }
 
     #[test]
     fn complete_the_first_match() {
         let basic = Basic::new(&["zz", "b3", "b2"]);
         let expected = ['3'];
-        assert_eq!(basic.complete_for(&['b']), Some(&expected[..]));
+        assert_eq!(basic.complete_for(&Mock::from("b")), Some(&expected[..]));
     }
 
     #[test]
     fn only_complete_the_remainder() {
         let basic = Basic::new(&["abcd", "abc"]);
-        let context = ['a', 'b', 'c'];
         let expected = ['d'];
-        assert_eq!(basic.complete_for(&context), Some(&expected[..]));
+        assert_eq!(basic.complete_for(&Mock::from("abc")), Some(&expected[..]));
     }
 
     #[test]
@@ -181,8 +185,8 @@ mod test {
         let basic = Basic::new(&["a", "b", "c"]);
         let options = [['a'], ['b'], ['c']];
         let expected = vec![&options[0][..], &options[1][..], &options[2][..]];
-        assert_eq!(&basic.suggest_for(&[]), &expected);
-        assert_eq!(&basic.suggest_for(&['a']), &expected);
-        assert_eq!(&basic.suggest_for(&['z']), &expected);
+        assert_eq!(&basic.suggest_for(&Mock::empty()), &expected);
+        assert_eq!(&basic.suggest_for(&Mock::from("a")), &expected);
+        assert_eq!(&basic.suggest_for(&Mock::from("z")), &expected);
     }
 }

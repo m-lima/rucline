@@ -93,6 +93,41 @@ pub mod actions;
 pub mod completion;
 pub mod prompt;
 
+pub use prompt::Context;
 pub use prompt::Prompt;
 
 pub use crossterm::ErrorKind;
+
+#[cfg(test)]
+pub(crate) mod mock {
+    pub(crate) struct Context {
+        pub(crate) buffer: Vec<char>,
+        pub(crate) cursor: usize,
+    }
+
+    impl crate::prompt::Context for Context {
+        fn buffer(&self) -> &[char] {
+            &self.buffer
+        }
+
+        fn cursor(&self) -> usize {
+            self.cursor
+        }
+    }
+
+    impl Context {
+        pub(super) fn empty() -> Self {
+            Self {
+                buffer: Vec::new(),
+                cursor: 0,
+            }
+        }
+
+        pub(crate) fn from(string: &str) -> Self {
+            Self {
+                buffer: string.chars().collect(),
+                cursor: string.len(),
+            }
+        }
+    }
+}

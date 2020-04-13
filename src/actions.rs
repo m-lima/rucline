@@ -124,7 +124,7 @@
 //! [`Action`]: enum.Action.html
 //! [`Noop`]: enum.Action.html#variant.Noop
 
-pub use crate::prompt::Context;
+pub use crate::Context;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -306,22 +306,7 @@ fn default_action(event: Event, context: &impl Context) -> Action {
 #[cfg(test)]
 mod test {
     use super::*;
-
-    struct ContextMock(bool);
-
-    impl Context for ContextMock {
-        fn buffer(&self) -> &[char] {
-            &['a']
-        }
-
-        fn cursor(&self) -> usize {
-            if self.0 {
-                1
-            } else {
-                0
-            }
-        }
-    }
+    use crate::mock::Context as Mock;
 
     #[test]
     fn should_complete_if_at_end() {
@@ -331,7 +316,20 @@ mod test {
         use Direction::Forward;
         use Range::*;
 
-        let c = ContextMock(false);
+        let mut c = Mock::from("a");
+
+        assert_eq!(default_action(Event::from(Right), &c), Complete(Line));
+        assert_eq!(default_action(Event::from(End), &c), Complete(Line));
+        assert_eq!(
+            default_action(Event::new(Char('f'), KeyModifiers::CONTROL), &c),
+            Complete(Line)
+        );
+        assert_eq!(
+            default_action(Event::new(Char('f'), KeyModifiers::ALT), &c),
+            Complete(Word)
+        );
+
+        c.cursor = 0;
 
         assert_eq!(
             default_action(Event::from(Right), &c),
@@ -346,37 +344,24 @@ mod test {
             default_action(Event::new(Char('f'), KeyModifiers::ALT), &c),
             Move(Word, Forward)
         );
-
-        let c = ContextMock(true);
-
-        assert_eq!(default_action(Event::from(Right), &c), Complete(Line));
-        assert_eq!(default_action(Event::from(End), &c), Complete(Line));
-        assert_eq!(
-            default_action(Event::new(Char('f'), KeyModifiers::CONTROL), &c),
-            Complete(Line)
-        );
-        assert_eq!(
-            default_action(Event::new(Char('f'), KeyModifiers::ALT), &c),
-            Complete(Word)
-        );
     }
 
     #[test]
     fn should_default_if_no_mapping() {
         use crossterm::event::KeyCode::Tab;
-        let action = action_for(&None, Event::from(Tab), &ContextMock(false));
+        let action = action_for(&None, Event::from(Tab), &Mock::empty());
         assert_eq!(action, Action::Suggest(Direction::Forward));
     }
 
     mod basic {
         use super::super::*;
-        use super::ContextMock;
+        use super::Mock;
         use crossterm::event::KeyCode::Tab;
 
         #[test]
         fn should_default_if_event_missing_form_mapping() {
             let overrider = Box::new(KeyBindings::new());
-            let action = action_for(&Some(overrider), Event::from(Tab), &ContextMock(false));
+            let action = action_for(&Some(overrider), Event::from(Tab), &Mock::empty());
             assert_eq!(action, Action::Suggest(Direction::Forward));
         }
 
@@ -385,20 +370,20 @@ mod test {
             let mut bindings = KeyBindings::new();
             bindings.insert(Event::from(Tab), Action::Write('\t'));
             let overrider = Box::new(bindings);
-            let action = action_for(&Some(overrider), Event::from(Tab), &ContextMock(false));
+            let action = action_for(&Some(overrider), Event::from(Tab), &Mock::empty());
             assert_eq!(action, Action::Write('\t'));
         }
     }
 
     mod lambda {
         use super::super::*;
-        use super::ContextMock;
+        use super::Mock;
         use crossterm::event::KeyCode::Tab;
 
         #[test]
         fn should_default_if_event_missing_form_mapping() {
             let overrider = Box::new(|_, _: &dyn Context| None);
-            let action = action_for(&Some(overrider), Event::from(Tab), &ContextMock(false));
+            let action = action_for(&Some(overrider), Event::from(Tab), &Mock::empty());
             assert_eq!(action, Action::Suggest(Direction::Forward));
         }
 
@@ -411,7 +396,7 @@ mod test {
                     None
                 }
             });
-            let action = action_for(&Some(overrider), Event::from(Tab), &ContextMock(false));
+            let action = action_for(&Some(overrider), Event::from(Tab), &Mock::empty());
             assert_eq!(action, Action::Write('\t'));
         }
     }

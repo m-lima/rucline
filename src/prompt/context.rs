@@ -107,9 +107,7 @@ impl<'a> ContextImpl<'a> {
 
     fn update_completion(&mut self) {
         if let Some(completer) = self.completer {
-            self.completion = completer
-                .complete_for(&self.buffer)
-                .map(std::convert::Into::into);
+            self.completion = completer.complete_for(self).map(std::convert::Into::into);
         }
     }
 
@@ -121,7 +119,7 @@ impl<'a> ContextImpl<'a> {
                     return self.writer.print_suggestions(index, &suggestions.options);
                 }
             } else {
-                let options = suggester.suggest_for(&self.buffer);
+                let options = suggester.suggest_for(self);
                 if !options.is_empty() {
                     self.suggestions = Some(Suggestions::new(
                         options.into_iter().map(std::convert::Into::into).collect(),
