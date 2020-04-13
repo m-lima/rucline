@@ -27,32 +27,22 @@ impl Prompt {
         Prompt::default()
     }
 
-    #[must_use]
-    pub fn erase_after_read(mut self, erase_after_read: bool) -> Self {
+    pub fn erase_after_read(&mut self, erase_after_read: bool) -> &mut Self {
         self.erase_after_read = erase_after_read;
         self
     }
 
-    #[must_use]
-    pub fn prompt<P: ToString>(mut self, prompt: &P) -> Self {
-        self.prompt = Some(prompt.to_string().into());
-        self
-    }
-
-    #[must_use]
-    pub fn bindings(mut self, bindings: KeyBindings) -> Self {
+    pub fn bindings(&mut self, bindings: KeyBindings) -> &mut Self {
         self.bindings = Some(bindings);
         self
     }
 
-    #[must_use]
-    pub fn completer(mut self, completer: impl Completer + 'static) -> Self {
+    pub fn completer(&mut self, completer: impl Completer + 'static) -> &mut Self {
         self.completer = Some(Box::new(completer));
         self
     }
 
-    #[must_use]
-    pub fn suggester(mut self, suggester: impl Suggester + 'static) -> Self {
+    pub fn suggester(&mut self, suggester: impl Suggester + 'static) -> &mut Self {
         self.suggester = Some(Box::new(suggester));
         self
     }
@@ -95,6 +85,19 @@ impl Default for Prompt {
         Self {
             erase_after_read: false,
             prompt: None,
+            bindings: None,
+            completer: None,
+            suggester: None,
+        }
+    }
+}
+
+// TODO: Avoid the `to_string()` and incorporate Colorize into char_string
+impl<S: ToString> std::convert::From<S> for Prompt {
+    fn from(string: S) -> Self {
+        Self {
+            erase_after_read: false,
+            prompt: Some(string.to_string().into()),
             bindings: None,
             completer: None,
             suggester: None,

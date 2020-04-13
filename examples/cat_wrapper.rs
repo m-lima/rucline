@@ -15,13 +15,11 @@ fn main() {
     // Prepare a buffer to read from cat
     let mut buffer = [0_u8; 1024];
 
-    // Prepare the buffer
-    let prompt = Prompt::new()
-        .prompt(&"cat> ".green())
-        .completer(completion::Basic::new(&["quit"]));
-
     // While there is some data read
-    while let Ok(Some(input)) = prompt.read_line() {
+    while let Ok(Some(input)) = Prompt::from("cat> ".green())
+        .completer(completion::Basic::new(&["quit"]))
+        .read_line()
+    {
         // If the user wants to quit, do so
         if &input == "quit" {
             break;

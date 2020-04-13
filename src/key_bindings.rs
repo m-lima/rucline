@@ -2,8 +2,9 @@
 
 //! Provides mappings and actions to change the behavior of [`Prompt`] when parsing the user input.
 //!
-//! There is a default set of [`Action`]s that will be executed given user inputs. These mainly
-//! emulate the bahavior of a standard terminal.
+//! There is a built-in set of default [`Action`]s that will be executed upon user interaction.
+//! These are meant to feel natural when coming from the default terminal, while also adding further
+//! functionality and editing commands.
 //!
 //! However, bindings that override the default behavior can be given to [`Prompt`] to cause
 //! a different [`Action`] to be taken.

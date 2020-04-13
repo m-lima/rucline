@@ -5,6 +5,6 @@
 [![Documentation](https://docs.rs/rucline/badge.svg)](https://docs.rs/rucline)
 
 ![demo](docs/demo.gif)
-*Code for example available at* [examples/multiple.rs](../blob/master/examples/multiple.rs)
+> Code for demo above available at [examples/multiple.rs](../../blob/master/examples/multiple.rs)
 
 {{readme}}

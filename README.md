@@ -5,15 +5,12 @@
 [![Documentation](https://docs.rs/rucline/badge.svg)](https://docs.rs/rucline)
 
 ![demo](docs/demo.gif)
-*Code for example available at* [examples/multiple.rs](../../blob/master/examples/multiple.rs)
+> Code for demo above available at [examples/multiple.rs](../../blob/master/examples/multiple.rs)
 
-Rucline (Rust CLI line /rɪˈklaɪn/) is a cross-platform, UTF-8 aware, advanced edtigin,
-autocompletion capable, tab suggestion supporting line reader you can "recline" on.
-
-It provides advanced editing [`actions`] for user input and customization of the line
-reader.
-
-It uses [`crossterm`] as a backend to provide cross-platform support, and provides advanced
+Rucline, the Rust CLI Line reader, or simply "recline", is a cross-platform, UTF-8 compatible
+line reader that provides hooks for autocompletion and tab suggestion. It supports advanced
+editing [`actions`] and hooks for customizing the line reader behavior of the line reader making
+it more flexible than simply reading from `stdin`.
 
 #### Basic usage:
 
@@ -21,19 +18,12 @@ It uses [`crossterm`] as a backend to provide cross-platform support, and provid
 use rucline::completion;
 use rucline::Prompt;
 
-if let Ok(Some(string)) = Prompt::new()
-    // Add a prompt question
-    .prompt("What's you favorite website? ")
-    // Add some likely values as completions
-    .completer(completion::Basic::new(&[
+if let Ok(Some(string)) = Prompt::from("What's you favorite website? ")
+    // Add some tab completions (Optional)
+    .suggester(completion::Basic::new(&[
         "https://www.rust-lang.org/",
         "https://docs.rs/",
         "https://crates.io/",
-    ]))
-    // Add some tab completions
-    .suggester(completion::Basic::new(&[
-        "https://www.startpage.com/",
-        "https://www.google.com/",
     ]))
     //Block until value is ready
     .read_line()
@@ -44,8 +34,11 @@ if let Ok(Some(string)) = Prompt::new()
 
 ## Actions
 
-Rucline allow advanced [`actions`] for interacting with the [`Prompt`], but it
-comes built-in with useful behavior. For example, a few of the build-ins:
+Rucline's behavior can be customized and composed with use of [`actions`].
+
+There is a built-in set of default [`actions`] that will be executed upon user interaction.
+These are meant to feel natural when coming from the default terminal, while also adding further
+functionality and editing commands. For example, a few of the build-ins:
 * `Tab`: cycle through completions
 * `Shift` + `Tab`: cycle through completions in reverse
 * `CTRL` + `W`: delete the current work
@@ -55,9 +48,9 @@ comes built-in with useful behavior. For example, a few of the build-ins:
 * `CTRL` + `H`: delete the beggining of the line
 * `CTRL` + `L`: delete the end of the line
 
-**See [`Action`][`actions`] for the full default behavior**
+> See [`Action`][`actions`] for the full default behavior specification
 
-The behavior can be customized by overriding user [`events`] with [`actions`]. Which
+The default behavior can be customized by overriding user [`events`] with [`actions`]. Which
 in turn can be serialized, stored, and loaded at run-time.
 
 
@@ -73,16 +66,14 @@ let mut bindings = KeyBindings::new();
 // Accept the full suggestions if `right` is pressed
 bindings.insert(Event::from(KeyCode::Right), Action::Complete(Range::Line));
 
-if let Ok(Some(string)) = Prompt::new()
-    // Create a bold prompt
-    .prompt("What's you favorite website? ")
+if let Ok(Some(string)) = Prompt::from("What's you favorite website? ")
     // Add some likely values as completions
     .completer(completion::Basic::new(&[
         "https://www.rust-lang.org/",
         "https://docs.rs/",
         "https://crates.io/",
     ]))
-    // Override the `right` key to always fill the full suggestions line
+    // Set the new key bindings as an override
     .bindings(bindings)
     //Block until value is ready
     .read_line()
@@ -90,6 +81,10 @@ if let Ok(Some(string)) = Prompt::new()
     println!("'{}' seems to be your favorite website", string);
 }
 ```
+
+## Hooks
+
+
 
 [`crossterm`]: https://docs.rs/crossterm/
 [`KeyBindings`]: ../../blob/master/src/key_bindings.rs

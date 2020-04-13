@@ -9,9 +9,7 @@ fn main() {
     // Accept the full suggestions if `right` is pressed
     bindings.insert(Event::from(KeyCode::Right), Action::Complete(Range::Line));
 
-    if let Ok(Some(string)) = Prompt::new()
-        // Create a bold prompt
-        .prompt(&"What's you favorite website? ".bold())
+    if let Ok(Some(string)) = Prompt::from("What's you favorite website? ".bold())
         // Add some likely values as completions
         .completer(completion::Basic::new(&[
             "https://www.rust-lang.org/",
