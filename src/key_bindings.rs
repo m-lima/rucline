@@ -9,7 +9,7 @@
 //! However, bindings that override the default behavior can be given to [`Prompt`] to cause
 //! a different [`Action`] to be taken.
 //!
-//! # Example
+//! # Examples
 //!
 //! ```
 //! use rucline::Prompt;
@@ -19,7 +19,19 @@
 //! let mut bindings = KeyBindings::new();
 //! bindings.insert(Event::from(KeyCode::Tab), Action::Write('\t'));
 //!
-//! let prompt = Prompt::new().bindings(bindings);
+//! let prompt = Prompt::new().overrider(bindings);
+//! ```
+//!
+//! ```
+//! use rucline::Prompt;
+//! use rucline::key_bindings::{Action, Event, KeyBindings};
+//! use crossterm::event::KeyCode;
+//!
+//! let prompt = Prompt::new().overrider(|e| if e == Event::from(KeyCode::Tab) {
+//!     Some(Action::Write('\t'))
+//! } else {
+//!     None
+//! });
 //! ```
 //!
 //! # Overriding a default action
@@ -59,6 +71,10 @@
 //! will be as follows:
 //!
 //! ```no_run
+//! # fn default_action(event: rucline::key_bindings::Event) -> rucline::key_bindings::Action {
+//! # use crossterm::event::KeyCode;
+//! # use rucline::key_bindings::{Action::*, Direction::*, Range::*, Scope::* };
+//! # match event.code {
 //! KeyCode::Enter => Accept,
 //! KeyCode::Esc => Cancel,
 //! KeyCode::Tab => Suggest(Forward),
@@ -90,8 +106,8 @@
 //!         }
 //!     } else if event.modifiers == crossterm::event::KeyModifiers::ALT {
 //!         match c {
-//!             'b' => Move(Range::Word, Backward),
-//!             'f' => Move(Range::Word, Forward),
+//!             'b' => Move(Word, Backward),
+//!             'f' => Move(Word, Forward),
 //!             _ => Noop,
 //!         }
 //!     } else {
@@ -99,6 +115,7 @@
 //!     }
 //! }
 //! _ => Noop,
+//! # }}
 //! ```
 //!
 //! [`Prompt`]: ../prompt/struct.Prompt.html
@@ -174,22 +191,23 @@ pub enum Direction {
     Backward,
 }
 
+// TODO: Send context to Overrider (andpossibly remove the "Complete" from the Move in Context)
 pub trait Overrider {
     fn override_for(&self, event: Event) -> Option<Action>;
 }
 
-pub struct Basic(KeyBindings);
-
-impl Basic {
-    #[must_use]
-    pub fn new(bindings: KeyBindings) -> Self {
-        Self(bindings)
+impl Overrider for KeyBindings {
+    fn override_for(&self, event: Event) -> Option<Action> {
+        self.get(&event).copied()
     }
 }
 
-impl Overrider for Basic {
+impl<F> Overrider for F
+where
+    F: Fn(Event) -> Option<Action>,
+{
     fn override_for(&self, event: Event) -> Option<Action> {
-        self.0.get(&event).copied()
+        self(event)
     }
 }
 
@@ -241,8 +259,8 @@ fn default_action(event: Event) -> Action {
                 }
             } else if event.modifiers == crossterm::event::KeyModifiers::ALT {
                 match c {
-                    'b' => Move(Range::Word, Backward),
-                    'f' => Move(Range::Word, Forward),
+                    'b' => Move(Word, Backward),
+                    'f' => Move(Word, Forward),
                     _ => Noop,
                 }
             } else {
@@ -264,19 +282,49 @@ mod test {
         assert_eq!(action, Action::Suggest(Direction::Forward));
     }
 
-    #[test]
-    fn should_default_if_event_missing_form_mapping() {
-        let overrider = Box::new(Basic::new(KeyBindings::new()));
-        let action = action_for(&Some(overrider), Event::from(Tab));
-        assert_eq!(action, Action::Suggest(Direction::Forward));
+    mod basic {
+        use super::super::*;
+        use crossterm::event::KeyCode::Tab;
+
+        #[test]
+        fn should_default_if_event_missing_form_mapping() {
+            let overrider = Box::new(KeyBindings::new());
+            let action = action_for(&Some(overrider), Event::from(Tab));
+            assert_eq!(action, Action::Suggest(Direction::Forward));
+        }
+
+        #[test]
+        fn should_override_if_defined() {
+            let mut bindings = KeyBindings::new();
+            bindings.insert(Event::from(Tab), Action::Write('\t'));
+            let overrider = Box::new(bindings);
+            let action = action_for(&Some(overrider), Event::from(Tab));
+            assert_eq!(action, Action::Write('\t'));
+        }
     }
 
-    #[test]
-    fn should_override_if_defined() {
-        let mut bindings = KeyBindings::new();
-        bindings.insert(Event::from(Tab), Action::Write('\t'));
-        let overrider = Box::new(Basic::new(bindings));
-        let action = action_for(&Some(overrider), Event::from(Tab));
-        assert_eq!(action, Action::Write('\t'));
+    mod lambda {
+        use super::super::*;
+        use crossterm::event::KeyCode::Tab;
+
+        #[test]
+        fn should_default_if_event_missing_form_mapping() {
+            let overrider = Box::new(|_| None);
+            let action = action_for(&Some(overrider), Event::from(Tab));
+            assert_eq!(action, Action::Suggest(Direction::Forward));
+        }
+
+        #[test]
+        fn should_override_if_defined() {
+            let overrider = Box::new(|e| {
+                if e == Event::from(Tab) {
+                    Some(Action::Write('\t'))
+                } else {
+                    None
+                }
+            });
+            let action = action_for(&Some(overrider), Event::from(Tab));
+            assert_eq!(action, Action::Write('\t'));
+        }
     }
 }

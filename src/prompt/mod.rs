@@ -11,11 +11,13 @@ use writer::Writer;
 
 use crate::completion::{Completer, Suggester};
 use crate::key_bindings::{action_for, Action, Direction, Overrider, Range, Scope};
+// use crate::key_bindings::{action_for, Action, Direction, Event, Range, Scope};
 
 pub struct Prompt {
     erase_after_read: bool,
     prompt: Option<CharString>,
     overrider: Option<Box<dyn Overrider>>,
+    // overrider: Option<Box<dyn Fn(Event) -> Option<Action>>>,
     completer: Option<Box<dyn Completer>>,
     suggester: Option<Box<dyn Suggester>>,
 }
@@ -32,6 +34,7 @@ impl Prompt {
     }
 
     pub fn overrider(&mut self, overrider: impl Overrider + 'static) -> &mut Self {
+        // pub fn overrider(&mut self, overrider: impl Fn(Event) -> Option<Action>) -> &mut Self {
         self.overrider = Some(Box::new(overrider));
         self
     }

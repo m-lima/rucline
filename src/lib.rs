@@ -73,7 +73,7 @@
 //!         "https://crates.io/",
 //!     ]))
 //!     // Set the new key bindings as an override
-//!     .bindings(bindings)
+//!     .overrider(bindings)
 //!     //Block until value is ready
 //!     .read_line()
 //! {
