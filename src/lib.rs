@@ -2,7 +2,6 @@
 #![warn(rust_2018_idioms)]
 // TDO: Remove when ready
 #![allow(missing_docs, clippy::missing_errors_doc)]
-
 // TODO: update when Prompt is updated
 // TODO: update when key_bindings is updated
 // TODO: hooks section

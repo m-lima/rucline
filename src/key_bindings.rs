@@ -174,11 +174,27 @@ pub enum Direction {
     Backward,
 }
 
-pub(super) fn action_for(
-    overrides: Option<&KeyBindings>,
-    event: crossterm::event::KeyEvent,
-) -> Action {
-    if let Some(action) = overrides.and_then(|b| b.get(&event).map(Clone::clone)) {
+pub trait Overrider {
+    fn override_for(&self, event: Event) -> Option<Action>;
+}
+
+pub struct Basic(KeyBindings);
+
+impl Basic {
+    #[must_use]
+    pub fn new(bindings: KeyBindings) -> Self {
+        Self(bindings)
+    }
+}
+
+impl Overrider for Basic {
+    fn override_for(&self, event: Event) -> Option<Action> {
+        self.0.get(&event).copied()
+    }
+}
+
+pub(super) fn action_for(overrides: &Option<Box<dyn Overrider>>, event: Event) -> Action {
+    if let Some(action) = overrides.as_ref().and_then(|b| b.override_for(event)) {
         action
     } else {
         default_action(event)
@@ -186,7 +202,7 @@ pub(super) fn action_for(
 }
 
 // TODO: Investigate '\n' being parsed and 'ENTER'
-fn default_action(event: crossterm::event::KeyEvent) -> Action {
+fn default_action(event: Event) -> Action {
     use crossterm::event::KeyCode;
     use Action::*;
     use Direction::*;
@@ -240,37 +256,27 @@ fn default_action(event: crossterm::event::KeyEvent) -> Action {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crossterm::event::KeyCode::Tab;
 
     #[test]
     fn should_default_if_no_mapping() {
-        let action = action_for(
-            None,
-            crossterm::event::KeyEvent::from(crossterm::event::KeyCode::Tab),
-        );
+        let action = action_for(&None, Event::from(Tab));
         assert_eq!(action, Action::Suggest(Direction::Forward));
     }
 
     #[test]
     fn should_default_if_event_missing_form_mapping() {
-        let bindings = KeyBindings::new();
-        let action = action_for(
-            Some(&bindings),
-            crossterm::event::KeyEvent::from(crossterm::event::KeyCode::Tab),
-        );
+        let overrider = Box::new(Basic::new(KeyBindings::new()));
+        let action = action_for(&Some(overrider), Event::from(Tab));
         assert_eq!(action, Action::Suggest(Direction::Forward));
     }
 
     #[test]
     fn should_override_if_defined() {
         let mut bindings = KeyBindings::new();
-        bindings.insert(
-            crossterm::event::KeyEvent::from(crossterm::event::KeyCode::Tab),
-            Action::Write('\t'),
-        );
-        let action = action_for(
-            Some(&bindings),
-            crossterm::event::KeyEvent::from(crossterm::event::KeyCode::Tab),
-        );
+        bindings.insert(Event::from(Tab), Action::Write('\t'));
+        let overrider = Box::new(Basic::new(bindings));
+        let action = action_for(&Some(overrider), Event::from(Tab));
         assert_eq!(action, Action::Write('\t'));
     }
 }

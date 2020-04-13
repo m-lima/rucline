@@ -4,19 +4,18 @@ mod context;
 mod navigation;
 mod writer;
 
-use crate::completion::{Completer, Suggester};
-
 use buffer::Buffer;
 use char_string::{CharString, CharStringView};
 use context::Context;
 use writer::Writer;
 
-use crate::key_bindings::{action_for, Action, Direction, KeyBindings, Range, Scope};
+use crate::completion::{Completer, Suggester};
+use crate::key_bindings::{action_for, Action, Direction, Overrider, Range, Scope};
 
 pub struct Prompt {
     erase_after_read: bool,
     prompt: Option<CharString>,
-    bindings: Option<KeyBindings>,
+    overrider: Option<Box<dyn Overrider>>,
     completer: Option<Box<dyn Completer>>,
     suggester: Option<Box<dyn Suggester>>,
 }
@@ -32,8 +31,8 @@ impl Prompt {
         self
     }
 
-    pub fn bindings(&mut self, bindings: KeyBindings) -> &mut Self {
-        self.bindings = Some(bindings);
+    pub fn overrider(&mut self, overrider: impl Overrider + 'static) -> &mut Self {
+        self.overrider = Some(Box::new(overrider));
         self
     }
 
@@ -59,7 +58,7 @@ impl Prompt {
         context.print()?;
         loop {
             if let crossterm::event::Event::Key(e) = crossterm::event::read()? {
-                match action_for(self.bindings.as_ref(), e) {
+                match action_for(&self.overrider, e) {
                     Action::Write(c) => context.write(c)?,
                     Action::Delete(scope) => context.delete(scope)?,
                     Action::Move(range, direction) => context.move_cursor(range, direction)?,
@@ -85,7 +84,7 @@ impl Default for Prompt {
         Self {
             erase_after_read: false,
             prompt: None,
-            bindings: None,
+            overrider: None,
             completer: None,
             suggester: None,
         }
@@ -98,7 +97,7 @@ impl<S: ToString> std::convert::From<S> for Prompt {
         Self {
             erase_after_read: false,
             prompt: Some(string.to_string().into()),
-            bindings: None,
+            overrider: None,
             completer: None,
             suggester: None,
         }

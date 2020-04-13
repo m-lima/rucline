@@ -1,5 +1,6 @@
 use colored::Colorize;
 use crossterm::event::KeyCode;
+use rucline::key_bindings;
 use rucline::key_bindings::{Action, Event, KeyBindings, Range};
 use rucline::{completion, Prompt};
 
@@ -17,7 +18,7 @@ fn main() {
             "https://crates.io/",
         ]))
         // Override the `right` key to always fill the full suggestions line
-        .bindings(bindings)
+        .overrider(key_bindings::Basic::new(bindings))
         //Block until value is ready
         .read_line()
     {
