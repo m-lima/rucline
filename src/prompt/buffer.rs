@@ -33,12 +33,6 @@ impl Buffer {
         self.cursor
     }
 
-    /// Returns if the current position of the cursor is at the end of the buffer.
-    #[inline]
-    pub(super) fn at_end(&self) -> bool {
-        self.cursor == self.chars.len()
-    }
-
     /// Puts the cursor at the end of the buffer
     /// This is short-hand for `move_cursor(Range::Line, Direction::Forward)`
     #[inline]

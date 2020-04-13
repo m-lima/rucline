@@ -1,13 +1,15 @@
 mod buffer;
 mod char_string;
-mod context;
 mod navigation;
 mod writer;
 
 use buffer::Buffer;
 use char_string::{CharString, CharStringView};
-use context::Context;
+use context::ContextImpl;
 use writer::Writer;
+
+pub mod context;
+pub use context::Context;
 
 use crate::actions::{action_for, Action, Direction, Overrider, Range, Scope};
 use crate::completion::{Completer, Suggester};
@@ -16,7 +18,6 @@ pub struct Prompt {
     erase_after_read: bool,
     prompt: Option<CharString>,
     overrider: Option<Box<dyn Overrider>>,
-    // overrider: Option<Box<dyn Fn(Event) -> Option<Action>>>,
     completer: Option<Box<dyn Completer>>,
     suggester: Option<Box<dyn Suggester>>,
 }
@@ -33,7 +34,6 @@ impl Prompt {
     }
 
     pub fn overrider(&mut self, overrider: impl Overrider + 'static) -> &mut Self {
-        // pub fn overrider(&mut self, overrider: impl Fn(Event) -> Option<Action>) -> &mut Self {
         self.overrider = Some(Box::new(overrider));
         self
     }
@@ -50,7 +50,7 @@ impl Prompt {
 
     // TODO: Support crossterm async
     pub fn read_line(&self) -> Result<Option<String>, crate::ErrorKind> {
-        let mut context = Context::new(
+        let mut context = ContextImpl::new(
             self.erase_after_read,
             self.prompt.as_ref(),
             &self.completer,
@@ -60,7 +60,7 @@ impl Prompt {
         context.print()?;
         loop {
             if let crossterm::event::Event::Key(e) = crossterm::event::read()? {
-                match action_for(&self.overrider, e) {
+                match action_for(&self.overrider, e, &context) {
                     Action::Write(c) => context.write(c)?,
                     Action::Delete(scope) => context.delete(scope)?,
                     Action::Move(range, direction) => context.move_cursor(range, direction)?,

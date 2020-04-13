@@ -124,6 +124,8 @@
 //! [`Action`]: enum.Action.html
 //! [`Noop`]: enum.Action.html#variant.Noop
 
+use crate::prompt::Context;
+
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -211,16 +213,43 @@ where
     }
 }
 
-pub(super) fn action_for(overrides: &Option<Box<dyn Overrider>>, event: Event) -> Action {
+pub(super) fn action_for(
+    overrides: &Option<Box<dyn Overrider>>,
+    event: Event,
+    context: &impl Context,
+) -> Action {
     if let Some(action) = overrides.as_ref().and_then(|b| b.override_for(event)) {
         action
     } else {
-        default_action(event)
+        default_action(event, context)
+    }
+}
+
+#[inline]
+fn control_pressed(event: &Event) -> bool {
+    event.modifiers == crossterm::event::KeyModifiers::CONTROL
+}
+
+#[inline]
+fn alt_pressed(event: &Event) -> bool {
+    event.modifiers == crossterm::event::KeyModifiers::ALT
+}
+
+#[inline]
+fn complete_if_at_end_else_move(context: &impl Context, range: Range) -> Action {
+    if context.cursor() == context.buffer().len() {
+        if range == Range::Word {
+            Action::Complete(Range::Word)
+        } else {
+            Action::Complete(Range::Line)
+        }
+    } else {
+        Action::Move(range, Direction::Forward)
     }
 }
 
 // TODO: Investigate '\n' being parsed and 'ENTER'
-fn default_action(event: Event) -> Action {
+fn default_action(event: Event, context: &impl Context) -> Action {
     use crossterm::event::KeyCode;
     use Action::*;
     use Direction::*;
@@ -234,20 +263,20 @@ fn default_action(event: Event) -> Action {
         KeyCode::BackTab => Suggest(Backward),
         KeyCode::Backspace => Delete(Relative(Single, Backward)),
         KeyCode::Delete => Delete(Relative(Single, Forward)),
-        KeyCode::Right => Move(Single, Forward),
+        KeyCode::Right => complete_if_at_end_else_move(context, Single),
         KeyCode::Left => Move(Single, Backward),
         KeyCode::Home => Move(Line, Backward),
-        KeyCode::End => Move(Line, Forward),
+        KeyCode::End => complete_if_at_end_else_move(context, Line),
         KeyCode::Char(c) => {
-            if event.modifiers == crossterm::event::KeyModifiers::CONTROL {
+            if control_pressed(&event) {
                 match c {
                     'm' | 'd' => Accept,
                     'c' => Cancel,
 
                     'b' => Move(Single, Backward),
-                    'f' => Move(Single, Forward),
+                    'f' => complete_if_at_end_else_move(context, Single),
                     'a' => Move(Line, Backward),
-                    'e' => Move(Line, Forward),
+                    'e' => complete_if_at_end_else_move(context, Line),
 
                     'j' => Delete(Relative(Word, Backward)),
                     'k' => Delete(Relative(Word, Forward)),
@@ -257,10 +286,10 @@ fn default_action(event: Event) -> Action {
                     'u' => Delete(WholeLine),
                     _ => Noop,
                 }
-            } else if event.modifiers == crossterm::event::KeyModifiers::ALT {
+            } else if alt_pressed(&event) {
                 match c {
                     'b' => Move(Word, Backward),
-                    'f' => Move(Word, Forward),
+                    'f' => complete_if_at_end_else_move(context, Word),
                     _ => Noop,
                 }
             } else {
@@ -274,22 +303,77 @@ fn default_action(event: Event) -> Action {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crossterm::event::KeyCode::Tab;
+
+    struct ContextMock(bool);
+
+    impl Context for ContextMock {
+        fn buffer(&self) -> &[char] {
+            &['a']
+        }
+
+        fn cursor(&self) -> usize {
+            if self.0 {
+                1
+            } else {
+                0
+            }
+        }
+    }
+
+    #[test]
+    fn should_complete_if_at_end() {
+        use crossterm::event::KeyCode::{Char, End, Right};
+        use crossterm::event::KeyModifiers;
+        use Action::{Complete, Move};
+        use Direction::Forward;
+        use Range::*;
+
+        let c = ContextMock(false);
+
+        assert_eq!(
+            default_action(Event::from(Right), &c),
+            Move(Single, Forward)
+        );
+        assert_eq!(default_action(Event::from(End), &c), Move(Line, Forward));
+        assert_eq!(
+            default_action(Event::new(Char('f'), KeyModifiers::CONTROL), &c),
+            Move(Single, Forward)
+        );
+        assert_eq!(
+            default_action(Event::new(Char('f'), KeyModifiers::ALT), &c),
+            Move(Word, Forward)
+        );
+
+        let c = ContextMock(true);
+
+        assert_eq!(default_action(Event::from(Right), &c), Complete(Line));
+        assert_eq!(default_action(Event::from(End), &c), Complete(Line));
+        assert_eq!(
+            default_action(Event::new(Char('f'), KeyModifiers::CONTROL), &c),
+            Complete(Line)
+        );
+        assert_eq!(
+            default_action(Event::new(Char('f'), KeyModifiers::ALT), &c),
+            Complete(Word)
+        );
+    }
 
     #[test]
     fn should_default_if_no_mapping() {
-        let action = action_for(&None, Event::from(Tab));
+        use crossterm::event::KeyCode::Tab;
+        let action = action_for(&None, Event::from(Tab), &ContextMock(false));
         assert_eq!(action, Action::Suggest(Direction::Forward));
     }
 
     mod basic {
         use super::super::*;
+        use super::ContextMock;
         use crossterm::event::KeyCode::Tab;
 
         #[test]
         fn should_default_if_event_missing_form_mapping() {
             let overrider = Box::new(KeyBindings::new());
-            let action = action_for(&Some(overrider), Event::from(Tab));
+            let action = action_for(&Some(overrider), Event::from(Tab), &ContextMock(false));
             assert_eq!(action, Action::Suggest(Direction::Forward));
         }
 
@@ -298,19 +382,20 @@ mod test {
             let mut bindings = KeyBindings::new();
             bindings.insert(Event::from(Tab), Action::Write('\t'));
             let overrider = Box::new(bindings);
-            let action = action_for(&Some(overrider), Event::from(Tab));
+            let action = action_for(&Some(overrider), Event::from(Tab), &ContextMock(false));
             assert_eq!(action, Action::Write('\t'));
         }
     }
 
     mod lambda {
         use super::super::*;
+        use super::ContextMock;
         use crossterm::event::KeyCode::Tab;
 
         #[test]
         fn should_default_if_event_missing_form_mapping() {
             let overrider = Box::new(|_| None);
-            let action = action_for(&Some(overrider), Event::from(Tab));
+            let action = action_for(&Some(overrider), Event::from(Tab), &ContextMock(false));
             assert_eq!(action, Action::Suggest(Direction::Forward));
         }
 
@@ -323,7 +408,7 @@ mod test {
                     None
                 }
             });
-            let action = action_for(&Some(overrider), Event::from(Tab));
+            let action = action_for(&Some(overrider), Event::from(Tab), &ContextMock(false));
             assert_eq!(action, Action::Write('\t'));
         }
     }

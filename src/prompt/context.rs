@@ -3,7 +3,12 @@ use super::{
     Writer,
 };
 
-pub(super) struct Context<'a> {
+pub trait Context {
+    fn buffer(&self) -> &[char];
+    fn cursor(&self) -> usize;
+}
+
+pub(super) struct ContextImpl<'a> {
     writer: Writer,
     buffer: Buffer,
     completer: &'a Option<Box<dyn Completer>>,
@@ -12,7 +17,19 @@ pub(super) struct Context<'a> {
     suggestions: Option<Suggestions<'a>>,
 }
 
-impl<'a> Context<'a> {
+impl Context for ContextImpl<'_> {
+    #[inline]
+    fn buffer(&self) -> &[char] {
+        &self.buffer
+    }
+
+    #[inline]
+    fn cursor(&self) -> usize {
+        self.buffer.cursor()
+    }
+}
+
+impl<'a> ContextImpl<'a> {
     pub(super) fn new(
         erase_on_drop: bool,
         prompt: Option<&CharString>,
@@ -58,12 +75,8 @@ impl<'a> Context<'a> {
         direction: Direction,
     ) -> Result<(), crate::ErrorKind> {
         self.try_take_suggestion();
-        if self.buffer.at_end() && direction == Direction::Forward {
-            self.complete(range)
-        } else {
-            self.buffer.move_cursor(range, direction);
-            self.writer.print(&self.buffer, self.completion)
-        }
+        self.buffer.move_cursor(range, direction);
+        self.writer.print(&self.buffer, self.completion)
     }
 
     pub(super) fn complete(&mut self, range: Range) -> Result<(), crate::ErrorKind> {
