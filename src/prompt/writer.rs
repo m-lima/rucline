@@ -76,6 +76,7 @@ impl Writer {
         self.printed_length = buffer.len();
 
         // Save position at the end of the buffer
+        // TODO: avoid this save and the later restore
         let end_of_buffer = crossterm::cursor::position().map(|pos| pos.0)?;
 
         // Print suggestions

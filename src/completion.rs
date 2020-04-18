@@ -57,6 +57,30 @@ pub trait Completer {
     fn complete_for(&self, context: &dyn Context) -> Option<&[char]>;
 }
 
+// impl Completer for &[&[char]] {
+//     // Allowed because it is more readable this way
+//     #[allow(clippy::find_map)]
+//     fn complete_for(&self, context: &dyn Context) -> Option<&[char]> {
+//         let buffer = context.buffer();
+//         if buffer.is_empty() {
+//             None
+//         } else {
+//             self.iter()
+//                 .find(|completion| completion.starts_with(buffer))
+//                 .map(|completion| &completion[buffer.len()..])
+//         }
+//     }
+// }
+
+// impl<'r, F> Completer for F
+// where
+//     F: 'r + Fn(&dyn Context) -> Option<&'r [char]>,
+// {
+//     fn complete_for<'a: 'r>(&'a self, context: &dyn Context) -> Option<&'a [char]> {
+//         self(context)
+//     }
+// }
+
 /// Generates a list of possible values for the [`Prompt`] buffer, usually associated with the
 /// Tab` key.
 ///
@@ -97,6 +121,23 @@ pub trait Suggester {
     /// [`Basic`]: struct.Basic.html#implementations
     fn suggest_for(&self, context: &dyn Context) -> Vec<&[char]>;
 }
+
+// impl<S: AsRef<str>> Suggester for &[S] {
+//     fn suggest_for(&self, _: &dyn Context) -> Vec<&[char]> {
+//         self.iter()
+//             .map(|option| option.as_ref().chars().collect::<Vec<_>>().as_slice())
+//             .collect::<Vec<_>>()
+//     }
+// }
+
+// impl<'a, F> Suggester for F
+// where
+//     F: Fn(&dyn Context) -> Vec<&'a [char]>,
+// {
+//     fn suggest_for(&self, context: &dyn Context) -> Vec<&'a [char]> {
+//         self(context)
+//     }
+// }
 
 /// A basic implementation of a completion provider serving both as an example and as a useful
 /// simple completer and suggester
@@ -154,11 +195,11 @@ mod test {
     use super::*;
     use crate::mock::Context as Mock;
 
-    #[test]
-    fn should_not_complete_if_empty() {
-        let basic = Basic::new(&["some programmer was here", "some developer was there"]);
-        assert_eq!(basic.complete_for(&Mock::empty()), None);
-    }
+    // #[test]
+    // fn should_not_complete_if_empty() {
+    //     let basic = ["some programmer was here", "some developer was there"];
+    //     assert_eq!(basic.complete_for(&Mock::empty()), None);
+    // }
 
     #[test]
     fn should_not_complete_if_context_is_different() {

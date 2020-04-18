@@ -105,3 +105,24 @@ impl<S: ToString> std::convert::From<S> for Prompt {
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    #[ignore] // TODO: can reuse prompt
+    fn can_reuse_prompt() {
+        let prompt = Prompt::new().overrider(|_, _: &dyn Context| None);
+        prompt.erase_after_read(true);
+    }
+
+    #[test]
+    fn accept_decorated_prompt() {
+        use colored::Colorize;
+
+        let prompt = Prompt::from("My prompt".green());
+
+        assert_eq!(prompt.prompt.unwrap().len(), format!("{}", "My prompt".green()).len())
+    }
+}
