@@ -252,10 +252,10 @@ fn complete_if_at_end_else_move(context: &impl Context, range: Range) -> Action 
 // TODO: Investigate '\n' being parsed and 'ENTER'
 fn default_action(event: Event, context: &impl Context) -> Action {
     use crossterm::event::KeyCode;
-    use Action::*;
-    use Direction::*;
-    use Range::*;
-    use Scope::*;
+    use Action::{Accept, Cancel, Delete, Move, Noop, Suggest, Write};
+    use Direction::{Backward, Forward};
+    use Range::{Line, Single, Word};
+    use Scope::{Relative, WholeLine, WholeWord};
 
     match event.code {
         KeyCode::Enter => Accept,
@@ -303,7 +303,7 @@ fn default_action(event: Event, context: &impl Context) -> Action {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use super::{action_for, default_action, Action, Direction, Event, Range};
     use crate::test::mock::Context as Mock;
 
     #[test]
@@ -312,7 +312,7 @@ mod test {
         use crossterm::event::KeyModifiers;
         use Action::{Complete, Move};
         use Direction::Forward;
-        use Range::*;
+        use Range::{Line, Single, Word};
 
         let mut c = Mock::from("a");
 
@@ -352,7 +352,7 @@ mod test {
     }
 
     mod basic {
-        use super::super::*;
+        use super::super::{action_for, Action, Direction, Event, KeyBindings};
         use super::Mock;
         use crossterm::event::KeyCode::Tab;
 
@@ -374,7 +374,7 @@ mod test {
     }
 
     mod lambda {
-        use super::super::*;
+        use super::super::{action_for, Action, Context, Direction, Event};
         use super::Mock;
         use crossterm::event::KeyCode::Tab;
 

@@ -201,7 +201,7 @@ impl Suggester for Basic {
 #[cfg(test)]
 mod test {
     mod basic {
-        use super::super::*;
+        use super::super::{Basic, Completer, Suggester};
         use crate::test::mock::Context as Mock;
 
         #[test]
@@ -242,7 +242,7 @@ mod test {
     }
 
     mod lambda {
-        use super::super::*;
+        use super::super::{Basic, Completer, Context, Lambda, Suggester};
         use crate::test::mock::Context as Mock;
 
         #[test]

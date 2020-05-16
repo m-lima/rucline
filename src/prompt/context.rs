@@ -173,7 +173,7 @@ impl<'a> Suggestions<'a> {
     // Allowed because it is more readable
     #[allow(clippy::match_same_arms)]
     fn cycle(&mut self, direction: Direction) {
-        use Direction::*;
+        use Direction::{Backward, Forward};
 
         let last_index = self.options.len() - 1;
 

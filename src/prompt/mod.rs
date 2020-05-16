@@ -112,7 +112,7 @@ impl<S: ToString> std::convert::From<S> for Prompt {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use super::Prompt;
 
     #[test]
     fn can_reuse_prompt() {

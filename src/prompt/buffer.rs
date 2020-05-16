@@ -72,9 +72,9 @@ impl Buffer {
     /// Deletes the given [`scope`](../../actions/enum.Scope.html) from this buffer
     /// and updates the cursor accordingly.
     pub(super) fn delete(&mut self, scope: Scope) {
-        use Direction::*;
-        use Range::*;
-        use Scope::*;
+        use Direction::{Backward, Forward};
+        use Range::{Line, Single, Word};
+        use Scope::{Relative, WholeLine, WholeWord};
 
         match scope {
             Relative(Single, Backward) => {
@@ -122,8 +122,8 @@ impl Buffer {
 
     /// Moves the cursor by [`range`](../../actions/enum.Range.html)
     pub(super) fn move_cursor(&mut self, range: Range, direction: Direction) {
-        use Direction::*;
-        use Range::*;
+        use Direction::{Backward, Forward};
+        use Range::{Line, Single, Word};
 
         match (range, direction) {
             (Single, Backward) => {
@@ -179,7 +179,7 @@ impl std::fmt::Display for Buffer {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use super::{Buffer, Direction, Range, Scope};
     use crate::prompt::char_string::CharString;
 
     fn build_uut(string: &str) -> Buffer {
