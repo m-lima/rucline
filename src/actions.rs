@@ -204,6 +204,20 @@ impl Overrider for KeyBindings {
     }
 }
 
+// impl FnOnce<(Event, &'_ dyn Context)> for KeyBindings {
+//     type Output = Option<Action>;
+//
+//     fn call_once(self, args: (Event, &dyn Context)) -> Self::Output {
+//         self.get(&args.0).copied()
+//     }
+// }
+//
+// impl Fn<(Event, &dyn Context)> for KeyBindings {
+//     fn call(&self, args: (Event, &dyn Context)) -> Self::Output {
+//         self.get(&args.0).copied()
+//     }
+// }
+
 impl<F> Overrider for F
 where
     F: Fn(Event, &dyn Context) -> Option<Action>,
@@ -306,7 +320,7 @@ fn default_action(event: Event, context: &impl Context) -> Action {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::mock::Context as Mock;
+    use crate::test::mock::Context as Mock;
 
     #[test]
     fn should_complete_if_at_end() {

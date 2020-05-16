@@ -72,6 +72,40 @@ pub trait Completer {
 //     }
 // }
 
+pub struct Lambda<'a, F>
+where
+    F: 'a + Fn(&dyn Context) -> Option<&'a [char]>,
+{
+    lambda: F,
+}
+
+impl<'a, F> std::convert::From<F> for Lambda<'a, F>
+where
+    F: 'a + Fn(&dyn Context) -> Option<&'a [char]>,
+{
+    fn from(lambda: F) -> Self {
+        Self { lambda }
+    }
+}
+
+impl<'a, F> Completer for Lambda<'a, F>
+where
+    F: 'a + Fn(&dyn Context) -> Option<&'a [char]>,
+{
+    fn complete_for(&self, context: &dyn Context) -> Option<&[char]> {
+        (self.lambda)(context)
+    }
+}
+
+// impl<'a, F> Completer for F
+// where
+//     F: 'a + Fn(&dyn Context) -> Option<&'a [char]>,
+// {
+//     fn complete_for(&self, context: &dyn Context) -> Option<&[char]> {
+//         self(context)
+//     }
+// }
+
 // impl<'r, F> Completer for F
 // where
 //     F: 'r + Fn(&dyn Context) -> Option<&'r [char]>,
@@ -193,13 +227,14 @@ impl Suggester for Basic {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::mock::Context as Mock;
+    use crate::test::mock::Context as Mock;
 
-    // #[test]
-    // fn should_not_complete_if_empty() {
-    //     let basic = ["some programmer was here", "some developer was there"];
-    //     assert_eq!(basic.complete_for(&Mock::empty()), None);
-    // }
+    #[test]
+    fn should_not_complete_if_empty() {
+        // let basic = ["some programmer was here", "some developer was there"];
+        let basic = Basic::new(&["some programmer was here", "some developer was there"]);
+        assert_eq!(basic.complete_for(&Mock::empty()), None);
+    }
 
     #[test]
     fn should_not_complete_if_context_is_different() {

@@ -176,3 +176,26 @@ impl std::fmt::Display for Buffer {
         self.chars.fmt(fmt)
     }
 }
+
+// // TODO
+// #[cfg(test)]
+// mod test {
+//     use super::*;
+//     use crate::prompt::char_string::CharString;
+//
+//     const EMPTY: CharString = CharString::new();
+//     const WHITE_SPACE: CharString = CharString::from("   \t   ");
+//     const PRE_WHITE_SPACE: CharString = CharString::from("asd   \t   ");
+//     const POST_WHITE_SPACE: CharString = CharString::from("   \t   asd");
+//     const INTRA_WHITE_SPACE: CharString = CharString::from("   \t   asd   \t   ");
+//     const MULTIPLE_WORD: CharString = CharString::from("asdf bas  as   v as  bas   asdf");
+//
+//     #[test]
+//     fn delete_char() {}
+//
+//     #[test]
+//     fn delete_word() {}
+//
+//     #[test]
+//     fn delete_line() {}
+// }
