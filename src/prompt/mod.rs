@@ -28,22 +28,26 @@ impl Prompt {
         Prompt::default()
     }
 
-    pub fn erase_after_read(&mut self, erase_after_read: bool) -> &mut Self {
+    #[must_use]
+    pub fn erase_after_read(mut self, erase_after_read: bool) -> Self {
         self.erase_after_read = erase_after_read;
         self
     }
 
-    pub fn overrider(&mut self, overrider: impl Overrider + 'static) -> &mut Self {
+    #[must_use]
+    pub fn overrider(mut self, overrider: impl Overrider + 'static) -> Self {
         self.overrider = Some(Box::new(overrider));
         self
     }
 
-    pub fn completer(&mut self, completer: impl Completer + 'static) -> &mut Self {
+    #[must_use]
+    pub fn completer(mut self, completer: impl Completer + 'static) -> Self {
         self.completer = Some(Box::new(completer));
         self
     }
 
-    pub fn suggester(&mut self, suggester: impl Suggester + 'static) -> &mut Self {
+    #[must_use]
+    pub fn suggester(mut self, suggester: impl Suggester + 'static) -> Self {
         self.suggester = Some(Box::new(suggester));
         self
     }
@@ -110,13 +114,14 @@ impl<S: ToString> std::convert::From<S> for Prompt {
 mod test {
     use super::*;
 
-    // TODO: can reuse prompt
-    // #[test]
-    // #[ignore]
-    // fn can_reuse_prompt() {
-    //     let prompt = Prompt::new().overrider(|_, _: &dyn Context| None);
-    //     prompt.erase_after_read(true);
-    // }
+    #[test]
+    fn can_reuse_prompt() {
+        let mut prompt = Prompt::new().erase_after_read(true);
+        assert!(prompt.erase_after_read);
+
+        prompt = prompt.erase_after_read(false);
+        assert!(!prompt.erase_after_read);
+    }
 
     #[test]
     fn accept_decorated_prompt() {
