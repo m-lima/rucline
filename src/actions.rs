@@ -1,5 +1,3 @@
-// TODO: Consider making bindings also available as a lambda
-
 //! Provides mappings and actions to change the behavior of [`Prompt`] when parsing the user input.
 //!
 //! There is a built-in set of default [`Action`]s that will be executed upon user interaction.
@@ -193,7 +191,7 @@ pub enum Direction {
     Backward,
 }
 
-// TODO: Wanr about the lifetime of Context (if being ignored)
+// TODO: Warn about the lifetime of Context (if being ignored)
 pub trait Overrider {
     fn override_for(&self, event: Event, context: &dyn Context) -> Option<Action>;
 }
@@ -203,20 +201,6 @@ impl Overrider for KeyBindings {
         self.get(&event).copied()
     }
 }
-
-// impl FnOnce<(Event, &'_ dyn Context)> for KeyBindings {
-//     type Output = Option<Action>;
-//
-//     fn call_once(self, args: (Event, &dyn Context)) -> Self::Output {
-//         self.get(&args.0).copied()
-//     }
-// }
-//
-// impl Fn<(Event, &dyn Context)> for KeyBindings {
-//     fn call(&self, args: (Event, &dyn Context)) -> Self::Output {
-//         self.get(&args.0).copied()
-//     }
-// }
 
 impl<F> Overrider for F
 where
