@@ -1,9 +1,9 @@
 #![deny(warnings, missing_docs, clippy::pedantic, clippy::all)]
 #![warn(rust_2018_idioms)]
-// TDO: Remove when ready
+// TODO: DOC Remove when ready
 #![allow(missing_docs, clippy::missing_errors_doc)]
-// TODO: update when Prompt is updated
-// TODO: hooks section
+// TODO: DOC update when Prompt is updated
+// TODO: DOC hooks section
 
 //! Rucline, the Rust CLI Line reader, or simply "recline", is a cross-platform, UTF-8 compatible
 //! line reader that provides hooks for autocompletion and tab suggestion. It supports advanced
