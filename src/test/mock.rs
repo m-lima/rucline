@@ -3,7 +3,7 @@ pub struct Context {
     pub cursor: usize,
 }
 
-impl crate::prompt::Context for Context {
+impl crate::Context for Context {
     fn buffer(&self) -> &[char] {
         &self.buffer
     }

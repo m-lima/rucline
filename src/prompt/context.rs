@@ -2,11 +2,7 @@ use super::{
     navigation, Buffer, CharString, CharStringView, Completer, Direction, Range, Scope, Suggester,
     Writer,
 };
-
-pub trait Context {
-    fn buffer(&self) -> &[char];
-    fn cursor(&self) -> usize;
-}
+use crate::Context;
 
 pub(super) struct ContextImpl<'a> {
     writer: Writer,

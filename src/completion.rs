@@ -17,11 +17,11 @@
 //! Basic implementation for in-line completion:
 //!
 //! ```no_run
-//! use rucline::completion::Completer;
+//! use rucline::completion::{Completer, Context};
 //!
 //! struct Basic(Vec<Vec<char>>);
 //! impl Completer for Basic {
-//!   fn complete_for(&self, context: &dyn rucline::Context) -> Option<&[char]> {
+//!   fn complete_for(&self, context: &dyn Context) -> Option<&[char]> {
 //!       let buffer = context.buffer();
 //!       if buffer.is_empty() {
 //!           None
@@ -38,11 +38,11 @@
 //! Basic implementation for drop-down suggestions:
 //!
 //! ```no_run
-//! use rucline::completion::Suggester;
+//! use rucline::completion::{Context, Suggester};
 //!
 //! struct Basic(Vec<Vec<char>>);
 //! impl Suggester for Basic {
-//!   fn suggest_for(&self, context: &dyn rucline::Context) -> Vec<&[char]> {
+//!   fn suggest_for(&self, context: &dyn Context) -> Vec<&[char]> {
 //!       self.0.iter().map(Vec::as_slice).collect::<Vec<_>>()
 //!   }
 //! }
@@ -87,8 +87,9 @@
 //! With that said, if performance is not a concern, the trait implementaion may simply store a
 //! a `String` and return the `chars()` output.
 //!
-//! **See also [`Basic`]**
-//! **See also [`Lambda`]**
+//! # See also
+//! * [`Basic`]
+//! * [`Lambda`]
 //!
 //! [`Basic`]: struct.Basic.html#implementations
 //! [`Lambda`]: struct.Lambda.html#implementations
@@ -112,11 +113,11 @@ pub use crate::Context;
 /// Basic implementation:
 ///
 /// ```no_run
-/// use rucline::completion::Completer;
+/// use rucline::completion::{Completer, Context};
 ///
 /// struct Basic(Vec<Vec<char>>);
 /// impl Completer for Basic {
-///   fn complete_for(&self, context: &dyn rucline::Context) -> Option<&[char]> {
+///   fn complete_for(&self, context: &dyn Context) -> Option<&[char]> {
 ///       let buffer = context.buffer();
 ///       if buffer.is_empty() {
 ///           None
@@ -130,7 +131,8 @@ pub use crate::Context;
 /// }
 /// ```
 ///
-/// **See also [`Basic`]**
+/// # See also
+/// * [`Basic`]
 ///
 /// [`Basic`]: struct.Basic.html#implementations
 /// [`Complete`]: ../actions/enum.Action.html#variant.Complete
@@ -150,7 +152,8 @@ pub trait Completer {
     /// # Return
     /// * [`Option<&[char]>`] - A completion to be rendered. `None` if there are no suggestions.
     ///
-    /// **See also [`Basic`]**
+    /// # See also
+    /// * [`Basic`]
     ///
     /// [`Context`]: ../prompt/context/trait.Context.html
     /// [`Completer`]: trait.Completer.html
@@ -200,7 +203,8 @@ pub trait Suggester {
     /// # Return
     /// * [`Vec<&[char]>`] - The suggestions to be rendered as drop-down options. Empty if none.
     ///
-    /// **See also [`Basic`]**
+    /// # See also
+    /// * [`Basic`]
     ///
     /// [`Basic`]: struct.Basic.html#implementations
     /// [`Completer`]: trait.Completer.html
