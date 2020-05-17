@@ -6,6 +6,92 @@
 //! or a [`Suggester`] are provided, the [`Prompt`] will query for completions for the current
 //! state of the line.
 //!
+//! Notably, the traits from this module expose a `&[char]` interface. This is addressed in more detail
+//! below.
+//!
+//! This module also includes a convenience wrapper for lambdas, allowing quick implementation
+//! of completions with closures.
+//!
+//! # Examples
+//!
+//! Basic implementation for in-line completion:
+//!
+//! ```no_run
+//! use rucline::completion::Completer;
+//!
+//! struct Basic(Vec<Vec<char>>);
+//! impl Completer for Basic {
+//!   fn complete_for(&self, context: &dyn rucline::Context) -> Option<&[char]> {
+//!       let buffer = context.buffer();
+//!       if buffer.is_empty() {
+//!           None
+//!       } else {
+//!           self.0
+//!               .iter()
+//!               .find(|completion| completion.starts_with(buffer))
+//!               .map(|completion| &completion[buffer.len()..])
+//!       }
+//!   }
+//! }
+//! ```
+//!
+//! Basic implementation for drop-down suggestions:
+//!
+//! ```no_run
+//! use rucline::completion::Suggester;
+//!
+//! struct Basic(Vec<Vec<char>>);
+//! impl Suggester for Basic {
+//!   fn suggest_for(&self, context: &dyn rucline::Context) -> Vec<&[char]> {
+//!       self.0.iter().map(Vec::as_slice).collect::<Vec<_>>()
+//!   }
+//! }
+//! ```
+//!
+//! Basic implementation for drop-down suggestions with lambda:
+//!
+//! ```no_run
+//! use rucline::completion::{Context, Lambda};
+//!
+//! let completions: Vec<Vec<char>> = ["abc", "def", "example word", "weird \"˚∆˙\""]
+//!    .iter()
+//!    .map(|s| s.chars().collect())
+//!    .collect();
+//!let completer = Lambda::from(|c: &dyn Context| {
+//!    completions
+//!        .iter()
+//!        .filter(|s| s.starts_with(c.buffer()))
+//!        .map(Vec::as_slice)
+//!        .collect::<Vec<_>>()
+//!});
+//! ```
+//!
+//! # Usage of `&[char]`
+//!
+//! Strings in Rust support UTF-8, that means that a single character that is rendered in the
+//! terminal might be from a single byte to even four. To support cursor positioning and editing
+//! of the buffer, the data must be of a constant size, i.e. `char`.
+//!
+//! This is less memory efficient, however more effient in runtime - both in terms of memory as
+//! CPU, as described below.
+//! If the implementation stores and returns a `String`, this will "compact" the characters into
+//! the minimum necessary size for representing that glyph. However, once printed in the terminal,
+//! the data must be converted to `char`, as explained before. With that in mind, that would cause
+//! overhead of CPU and memory to convert and store the `String` to a array of `char`.
+//! Furthermore, it would not be possible to have a single data and pass around references, since
+//! allocation is needed to convert `String` -> `[char]`.
+//!
+//! By storing a `Vec<char>`, the trait implementation is able to return references to data that
+//! will not reallocate and will not need to be converted.
+//!
+//! With that said, if performance is not a concern, the trait implementaion may simply store a
+//! a `String` and return the `chars()` output.
+//!
+//! **See also [`Basic`]**
+//! **See also [`Lambda`]**
+//!
+//! [`Basic`]: struct.Basic.html#implementations
+//! [`Lambda`]: struct.Lambda.html#implementations
 //! [`Prompt`]: ../prompt/struct.Prompt.html
 //! [`Completer`]: trait.Completer.html
 //! [`Suggester`]: trait.Suggester.html
@@ -15,64 +101,82 @@ pub use crate::Context;
 /// Completes the buffer in-line.
 ///
 /// Whenever the line is edited, e.g. [`Write`] or [`Delete`], the [`Prompt`] will ask the
-/// `Completer` for a possible completion to **append** to the current buffer.
+/// `Completer` for a possible completion to **append** to the current buffer. The implementation
+/// may use the [`Context`] to decide which completions are applicable.
 ///
 /// The buffer is not actually changed, the completion is only rendered. A [`Complete`] action
 /// must be issued to incorporate the completion into the buffer.
 ///
+/// # Example
+///
+/// Basic implementation:
+///
+/// ```no_run
+/// use rucline::completion::Completer;
+///
+/// struct Basic(Vec<Vec<char>>);
+/// impl Completer for Basic {
+///   fn complete_for(&self, context: &dyn rucline::Context) -> Option<&[char]> {
+///       let buffer = context.buffer();
+///       if buffer.is_empty() {
+///           None
+///       } else {
+///           self.0
+///               .iter()
+///               .find(|completion| completion.starts_with(buffer))
+///               .map(|completion| &completion[buffer.len()..])
+///       }
+///   }
+/// }
+/// ```
+///
+/// **See also [`Basic`]**
+///
+/// [`Basic`]: struct.Basic.html#implementations
+/// [`Complete`]: ../actions/enum.Action.html#variant.Complete
+/// [`Context`]: ../prompt/context/trait.Context.html
+/// [`Delete`]: ../actions/enum.Action.html#variant.Delete
 /// [`Prompt`]: ../prompt/struct.Prompt.html
 /// [`Write`]: ../actions/enum.Action.html#variant.Write
-/// [`Delete`]: ../actions/enum.Action.html#variant.Delete
-/// [`Complete`]: ../actions/enum.Action.html#variant.Complete
 pub trait Completer {
-    /// Whenever the line is edited, e.g. [`Write`] or [`Delete`], the [`Prompt`] will ask the
-    /// [`Completer`] for a possible completion to **append** to the current buffer.
+    /// Provides the in-line completion for a given [`Context`].
     ///
-    /// # Examples
+    /// Whenever the line is edited, e.g. [`Write`] or [`Delete`], the [`Prompt`] will call
+    /// `complete_for` for a possible completion to **append** to the current buffer.
     ///
-    /// Basic implementation:
+    /// # Arguments
+    /// * [`context`] - The current context in which this event is coming in.
     ///
-    /// ```no_run
-    /// # struct Basic(Vec<Vec<char>>);
-    /// # impl rucline::completion::Completer for Basic {
-    /// fn complete_for(&self, context: &dyn rucline::Context) -> Option<&[char]> {
-    ///     let buffer = context.buffer();
-    ///     if buffer.is_empty() {
-    ///         None
-    ///     } else {
-    ///         self.0
-    ///             .iter()
-    ///             .find(|completion| completion.starts_with(buffer))
-    ///             .map(|completion| &completion[buffer.len()..])
-    ///     }
-    /// }
-    /// # }
-    /// ```
+    /// # Return
+    /// * [`Option<&[char]>`] - A completion to be rendered. `None` if there are no suggestions.
     ///
     /// **See also [`Basic`]**
     ///
+    /// [`Context`]: ../prompt/context/trait.Context.html
     /// [`Completer`]: trait.Completer.html
     /// [`Basic`]: struct.Basic.html#implementations
     fn complete_for(&self, context: &dyn Context) -> Option<&[char]>;
 }
 
 /// Generates a list of possible values for the [`Prompt`] buffer, usually associated with the
-/// Tab` key.
+/// `Tab` key.
 ///
 /// Whenever the [`Suggest`] action is triggered,  the [`Prompt`] will ask the
 /// `Suggester` for a list of values to **replace** to the current buffer.
 /// This list is kept by the [`Prompt`] for cycling back and forth until it is dropped by
-/// either accepting the suggestions or cancelling it.
+/// either accepting the suggestions or cancelling it. The implementation
+/// may use the [`Context`] to decide which completions are applicable.
 ///
 /// The buffer is not actually changed until the suggestion is accepted by either a [`Write`], a
 /// [`Delete`], [`Accept`] or a [`Move`], while a suggestion is selected.
 ///
-/// [`Prompt`]: ../prompt/struct.Prompt.html
-/// [`Write`]: ../actions/enum.Action.html#variant.Write
+/// [`Accept`]: ../actions/enum.Action.html#variant.Accept
+/// [`Context`]: ../prompt/context/trait.Context.html
 /// [`Delete`]: ../actions/enum.Action.html#variant.Delete
 /// [`Move`]: ../actions/enum.Action.html#variant.Move
-/// [`Accept`]: ../actions/enum.Action.html#variant.Accept
+/// [`Prompt`]: ../prompt/struct.Prompt.html
 /// [`Suggest`]: ../actions/enum.Action.html#variant.Suggest
+/// [`Write`]: ../actions/enum.Action.html#variant.Write
 pub trait Suggester {
     /// Whenever the [`Suggest`] action is triggered,  the [`Prompt`] will ask the
     /// `Suggester` for a list of values to **replace** to the current buffer.
@@ -90,13 +194,44 @@ pub trait Suggester {
     /// # }
     /// ```
     ///
+    /// # Arguments
+    /// * [`context`] - The current context in which this event is coming in.
+    ///
+    /// # Return
+    /// * [`Vec<&[char]>`] - The suggestions to be rendered as drop-down options. Empty if none.
+    ///
     /// **See also [`Basic`]**
     ///
-    /// [`Completer`]: trait.Completer.html
     /// [`Basic`]: struct.Basic.html#implementations
+    /// [`Completer`]: trait.Completer.html
+    /// [`Context`]: ../prompt/context/trait.Context.html
     fn suggest_for(&self, context: &dyn Context) -> Vec<&[char]>;
 }
 
+/// A wrapper that converts a lambda into a [`Completer`] or a [`Suggester`].
+///
+/// The valid signatures for the lambdas are:
+/// * [`Completer`] - `Fn(&dyn Context) -> Option<&[char]>`
+/// * [`Suggester`] - `Fn(&dyn Context) -> Vec<&[char]>`
+///
+/// **Note:**
+/// When declaring the lambda, it is necessary to let Rust know of the lifetime of the [`Context`].
+/// So, even if ignoring the argument, the type must be specified for Rust to infer the proper
+/// lifetimes.
+///
+/// # Example
+///
+/// Simple no-op completers:
+///
+/// ```no_run
+/// use rucline::completion::{Context, Lambda};
+/// let inline_completer = Lambda::from(|_: &dyn Context| None);
+/// let dropdown_suggester = Lambda::from(|_: &dyn Context| vec![]);
+/// ```
+///
+/// [`Completer`]: trait.Completer.html
+/// [`Context`]: ../prompt/context/trait.Context.html
+/// [`Suggester`]: trait.Suggester.html
 pub struct Lambda<'a, F, R>
 where
     F: Fn(&dyn Context) -> R,
@@ -148,11 +283,20 @@ where
 }
 
 /// A basic implementation of a completion provider serving both as an example and as a useful
-/// simple completer and suggester
+/// simple completer and suggester.
+///
+/// The default behavior for the traits are:
+/// * [`Completer`] - Return all the matches that start with the current [`Context`]
+/// buffer for in-line completions.
+/// * [`Suggester`] - Return all the entries.
+///
+/// [`Completer`]: trait.Completer.html
+/// [`Context`]: ../prompt/context/trait.Context.html
+/// [`Suggester`]: trait.Suggester.html
 pub struct Basic(Vec<Vec<char>>);
 
 impl Basic {
-    /// Creates a new instance from the list of `options` given
+    /// Creates a new instance from the list of `options` given.
     ///
     /// # Example
     ///

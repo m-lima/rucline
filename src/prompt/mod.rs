@@ -1,3 +1,6 @@
+// TODO: DOC Remove when ready
+#![allow(missing_docs, clippy::missing_errors_doc)]
+
 mod buffer;
 mod char_string;
 mod navigation;

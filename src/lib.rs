@@ -1,7 +1,5 @@
 #![deny(warnings, missing_docs, clippy::pedantic, clippy::all)]
 #![warn(rust_2018_idioms)]
-// TODO: DOC Remove when ready
-#![allow(missing_docs, clippy::missing_errors_doc)]
 // TODO: DOC update when Prompt is updated
 // TODO: DOC hooks section
 
