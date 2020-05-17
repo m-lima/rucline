@@ -70,7 +70,7 @@ pub(super) fn previous_word_end(pivot: usize, string: &[char]) -> usize {
 
 #[cfg(test)]
 mod test {
-    use crate::prompt::char_string::CharString;
+    use super::super::CharString;
 
     #[derive(Copy, Clone)]
     enum Direction {

@@ -179,8 +179,7 @@ impl std::fmt::Display for Buffer {
 
 #[cfg(test)]
 mod test {
-    use super::{Buffer, Direction, Range, Scope};
-    use crate::prompt::char_string::CharString;
+    use super::{Buffer, CharString, Direction, Range, Scope};
 
     fn build_uut(string: &str) -> Buffer {
         Buffer {
