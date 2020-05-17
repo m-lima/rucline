@@ -74,17 +74,13 @@ if let Ok(Some(string)) = Prompt::from("What's you favorite website? ")
         "https://crates.io/",
     ]))
     // Set the new key bindings as an override
-    .bindings(bindings)
+    .overrider(bindings)
     //Block until value is ready
     .read_line()
 {
     println!("'{}' seems to be your favorite website", string);
 }
 ```
-
-## Hooks
-
-
 
 [`crossterm`]: https://docs.rs/crossterm/
 [`KeyBindings`]: ../../blob/master/src/actions.rs
