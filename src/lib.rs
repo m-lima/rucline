@@ -32,7 +32,7 @@
 //!
 //! There is a built-in set of default [`actions`] that will be executed upon user interaction.
 //! These are meant to feel natural when coming from the default terminal, while also adding further
-//! functionality and editing commands. For example, a few of the build-ins:
+//! functionality and editing commands. For example, a few of the built-ins:
 //! * `Tab`: cycle through completions
 //! * `Shift` + `Tab`: cycle through completions in reverse
 //! * `CTRL` + `W`: delete the current work
