@@ -60,8 +60,8 @@
 //!
 //! # Saving key binding configurations
 //!
-//! If the feature `serialize`, [`KeyBindings`] can be serialized and stored.
-//!
+//! If the feature `serialize` is enabled, [`KeyBindings`] can be serialized, stored, and loaded
+//! at runtime.
 //!
 //! # Default behavior
 //!
@@ -191,8 +191,39 @@ pub enum Direction {
     Backward,
 }
 
-// TODO: Warn about the lifetime of Context (if being ignored)
+/// Overrides the behavior for a given [`Event`].
+///
+/// This trait has a convenience implementation for [`KeyBindings`] and also a conversion
+/// from lambdas.
+///
+/// # Example
+///
+/// ```
+/// use rucline::Prompt;
+/// use rucline::actions::{Action, Context, Event};
+/// use crossterm::event::KeyCode;
+///
+/// let prompt = Prompt::new().overrider(|e, _: &dyn Context| if e == Event::from(KeyCode::Tab) {
+///     Some(Action::Write('\t'))
+/// } else {
+///     None
+/// });
+/// ```
+///
+/// [`Event`]: type.Event.html
+/// [`KeyBindings`]: type.KeyBindings.html
 pub trait Overrider {
+    /// Overrides the behavior for the given [`Event`].
+    ///
+    /// [`Context`] will contain the current context of the prompt, in case the behavior should
+    /// be contextual.
+    ///
+    /// # Arguments
+    /// * [`event`] - The incoming event to be processed.
+    /// * [`context`] - The current context in which this event is coming in.
+    ///
+    /// [`Event`]: type.Event.html
+    /// [`Context`]: ../prompt/context/trait.Context.html
     fn override_for(&self, event: Event, context: &dyn Context) -> Option<Action>;
 }
 
