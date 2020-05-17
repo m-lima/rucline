@@ -83,11 +83,10 @@ impl Prompt {
     ///
     /// * `string` - The new prompt text
     #[must_use]
-    pub fn text<S>(mut self, string: S) -> Self
-    where
-        S: AsRef<str>,
-    {
-        self.text = Some(string.as_ref().into());
+    // Allowed because `impl ToString` doesn't necessarily need to consume `string`
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn text(mut self, string: impl ToString) -> Self {
+        self.text = Some(string.to_string().into());
         self
     }
 
@@ -234,7 +233,6 @@ impl Default for Prompt {
     }
 }
 
-// TODO: Avoid the `to_string()` and incorporate Colorize into char_string
 impl<S: ToString> std::convert::From<S> for Prompt {
     fn from(string: S) -> Self {
         Self {
@@ -264,12 +262,19 @@ mod test {
     fn accept_decorated_prompt() {
         use colored::Colorize;
 
-        let prompt = Prompt::from("My prompt".green());
+        let mut prompt = Prompt::from("My prompt".green());
+
+        assert_eq!(
+            prompt.text.take().unwrap().len(),
+            format!("{}", "My prompt".green()).len()
+        );
+
+        prompt = prompt.text("My prompt".blue());
 
         assert_eq!(
             prompt.text.unwrap().len(),
-            format!("{}", "My prompt".green()).len()
-        )
+            format!("{}", "My prompt".blue()).len()
+        );
     }
 
     #[test]
