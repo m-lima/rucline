@@ -69,17 +69,18 @@
 //! # Usage of `&[char]`
 //!
 //! Strings in Rust support UTF-8, that means that a single character that is rendered in the
-//! terminal might be from a single byte to even four. To support cursor positioning and editing
+//! terminal might be from a single byte to four. To support cursor positioning and editing
 //! of the buffer, the data must be of a constant size, i.e. `char`.
 //!
-//! This is less memory efficient, however more effient in runtime - both in terms of memory as
-//! CPU, as described below.
+//! This is less memory efficient, however more effient in runtime - both in terms of CPU and,
+//! unintuitevily, memory.
+//!
 //! If the implementation stores and returns a `String`, this will "compact" the characters into
 //! the minimum necessary size for representing that glyph. However, once printed in the terminal,
 //! the data must be converted to `char`, as explained before. With that in mind, that would cause
 //! overhead of CPU and memory to convert and store the `String` to a array of `char`.
-//! Furthermore, it would not be possible to have a single data and pass around references, since
-//! allocation is needed to convert `String` -> `[char]`.
+//! Furthermore, it would not be possible to have a single memory allocation and pass around
+//! references, since allocation is needed to convert `String` -> `[char]`.
 //!
 //! By storing a `Vec<char>`, the trait implementation is able to return references to data that
 //! will not reallocate and will not need to be converted.
@@ -91,8 +92,8 @@
 //! * [`Basic`]
 //! * [`Lambda`]
 //!
-//! [`Basic`]: struct.Basic.html#implementations
-//! [`Lambda`]: struct.Lambda.html#implementations
+//! [`Basic`]: struct.Basic.html
+//! [`Lambda`]: struct.Lambda.html
 //! [`Prompt`]: ../prompt/struct.Prompt.html
 //! [`Completer`]: trait.Completer.html
 //! [`Suggester`]: trait.Suggester.html

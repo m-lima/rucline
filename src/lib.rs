@@ -42,7 +42,7 @@
 //! * `CTRL` + `H`: delete the beggining of the line
 //! * `CTRL` + `L`: delete the end of the line
 //!
-//! > See [`Action`][`actions`] for the full default behavior specification
+//! > See [`Action`] for the full default behavior specification
 //!
 //! The default behavior can be customized by overriding user [`events`] with [`actions`]. Which
 //! in turn can be serialized, stored, and loaded at run-time.
@@ -79,6 +79,7 @@
 //! [`crossterm`]: https://docs.rs/crossterm/
 //! [`KeyBindings`]: actions/index.html
 //! [`actions`]: actions/enum.Action.html
+//! [`Action`]: actions/index.html#default-behavior
 //! [`events`]: actions/type.Event.html
 //! [`prompt`]: prompt/index.html
 pub mod actions;

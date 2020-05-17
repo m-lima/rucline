@@ -81,7 +81,7 @@ impl Prompt {
     ///
     /// # Arguments
     ///
-    /// * [`string`] - The new prompt text
+    /// * `string` - The new prompt text
     #[must_use]
     pub fn text<S>(mut self, string: S) -> Self
     where
@@ -189,7 +189,7 @@ impl Prompt {
     /// * [`ErrorKind`] - If an error occurred while reading the user input.
     ///
     /// [`Prompt`]: struct.Prompt.html
-    /// [`ErrorKind`]: https://docs.rs/crossterm/
+    /// [`ErrorKind`]: ../enum.ErrorKind.html
     pub fn read_line(&self) -> Result<Option<String>, crate::ErrorKind> {
         let mut context = ContextImpl::new(
             self.erase_after_read,
