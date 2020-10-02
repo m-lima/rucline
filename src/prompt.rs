@@ -8,7 +8,7 @@
 //!
 //! if let Ok(Some(string)) = Prompt::from("What's you favorite website? ")
 //!     // Add some tab completions (Optional)
-//!     .suggester(completion::Basic::new(&[
+//!     .suggester(&completion::Basic::new(&[
 //!         "https://www.rust-lang.org/",
 //!         "https://docs.rs/",
 //!         "https://crates.io/",
@@ -62,15 +62,15 @@ use crate::completion::{Completer, Suggester};
 /// [`erase_after_read`] is `true`.
 ///
 /// [`erase_after_read`]: struct.Prompt.html#method.erase_after_read
-pub struct Prompt {
+pub struct Prompt<'o, 'c, 's> {
     erase_after_read: bool,
     text: Option<CharString>,
-    overrider: Option<Box<dyn Overrider>>,
-    completer: Option<Box<dyn Completer>>,
-    suggester: Option<Box<dyn Suggester>>,
+    overrider: Option<&'o dyn Overrider>,
+    completer: Option<&'c dyn Completer>,
+    suggester: Option<&'s dyn Suggester>,
 }
 
-impl Prompt {
+impl<'o, 'c, 's> Prompt<'o, 'c, 's> {
     /// Creates a new empty prompt, with no prompt text.
     #[must_use]
     pub fn new() -> Self {
@@ -119,8 +119,8 @@ impl Prompt {
     ///
     /// [`Overrider`]: ../actions/trait.Overrider.html
     #[must_use]
-    pub fn overrider(mut self, overrider: impl Overrider + 'static) -> Self {
-        self.overrider = Some(Box::new(overrider));
+    pub fn overrider(mut self, overrider: &'o dyn Overrider) -> Self {
+        self.overrider = Some(overrider);
         self
     }
 
@@ -139,8 +139,8 @@ impl Prompt {
     ///
     /// [`Completer`]: ../completion/trait.Completer.html
     #[must_use]
-    pub fn completer(mut self, completer: impl Completer + 'static) -> Self {
-        self.completer = Some(Box::new(completer));
+    pub fn completer(mut self, completer: &'c dyn Completer) -> Self {
+        self.completer = Some(completer);
         self
     }
 
@@ -159,8 +159,8 @@ impl Prompt {
     ///
     /// [`Suggester`]: ../completion/trait.Suggester.html
     #[must_use]
-    pub fn suggester(mut self, suggester: impl Suggester + 'static) -> Self {
-        self.suggester = Some(Box::new(suggester));
+    pub fn suggester(mut self, suggester: &'s dyn Suggester) -> Self {
+        self.suggester = Some(suggester);
         self
     }
 
@@ -193,14 +193,14 @@ impl Prompt {
         let mut context = ContextImpl::new(
             self.erase_after_read,
             self.text.as_ref(),
-            &self.completer,
-            &self.suggester,
+            self.completer,
+            self.suggester,
         )?;
 
         context.print()?;
         loop {
             if let crossterm::event::Event::Key(e) = crossterm::event::read()? {
-                match action_for(&self.overrider, e, &context) {
+                match action_for(self.overrider, e, &context) {
                     Action::Write(c) => context.write(c)?,
                     Action::Delete(scope) => context.delete(scope)?,
                     Action::Move(range, direction) => context.move_cursor(range, direction)?,
@@ -221,7 +221,7 @@ impl Prompt {
     }
 }
 
-impl Default for Prompt {
+impl Default for Prompt<'_, '_, '_> {
     fn default() -> Self {
         Self {
             erase_after_read: false,
@@ -233,7 +233,7 @@ impl Default for Prompt {
     }
 }
 
-impl<S: ToString> std::convert::From<S> for Prompt {
+impl<S: ToString> std::convert::From<S> for Prompt<'_, '_, '_> {
     fn from(string: S) -> Self {
         Self {
             erase_after_read: false,

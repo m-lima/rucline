@@ -17,7 +17,7 @@ fn main() {
 
     // While there is some data read
     while let Ok(Some(input)) = Prompt::from("cat> ".green())
-        .completer(completion::Basic::new(&["quit"]))
+        .completer(&completion::Basic::new(&["quit"]))
         .read_line()
     {
         // If the user wants to quit, do so

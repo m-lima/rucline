@@ -14,7 +14,7 @@
 //!
 //! if let Ok(Some(string)) = Prompt::from("What's you favorite website? ")
 //!     // Add some tab completions (Optional)
-//!     .suggester(completion::Basic::new(&[
+//!     .suggester(&completion::Basic::new(&[
 //!         "https://www.rust-lang.org/",
 //!         "https://docs.rs/",
 //!         "https://crates.io/",
@@ -62,13 +62,13 @@
 //!
 //! if let Ok(Some(string)) = Prompt::from("What's you favorite website? ")
 //!     // Add some likely values as completions
-//!     .completer(completion::Basic::new(&[
+//!     .completer(&completion::Basic::new(&[
 //!         "https://www.rust-lang.org/",
 //!         "https://docs.rs/",
 //!         "https://crates.io/",
 //!     ]))
 //!     // Set the new key bindings as an override
-//!     .overrider(bindings)
+//!     .overrider(&bindings)
 //!     //Block until value is ready
 //!     .read_line()
 //! {

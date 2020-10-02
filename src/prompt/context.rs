@@ -4,16 +4,16 @@ use super::{
 };
 use crate::Context;
 
-pub(super) struct ContextImpl<'a> {
+pub(super) struct ContextImpl<'c, 's> {
     writer: Writer,
     buffer: Buffer,
-    completer: &'a Option<Box<dyn Completer>>,
-    completion: Option<CharStringView<'a>>,
-    suggester: &'a Option<Box<dyn Suggester>>,
-    suggestions: Option<Suggestions<'a>>,
+    completer: Option<&'c dyn Completer>,
+    completion: Option<CharStringView<'c>>,
+    suggester: Option<&'s dyn Suggester>,
+    suggestions: Option<Suggestions<'s>>,
 }
 
-impl Context for ContextImpl<'_> {
+impl Context for ContextImpl<'_, '_> {
     #[inline]
     fn buffer(&self) -> &[char] {
         &self.buffer
@@ -25,12 +25,12 @@ impl Context for ContextImpl<'_> {
     }
 }
 
-impl<'a> ContextImpl<'a> {
+impl<'c, 's> ContextImpl<'c, 's> {
     pub(super) fn new(
         erase_on_drop: bool,
         prompt: Option<&CharString>,
-        completer: &'a Option<Box<dyn Completer>>,
-        suggester: &'a Option<Box<dyn Suggester>>,
+        completer: Option<&'c dyn Completer>,
+        suggester: Option<&'s dyn Suggester>,
     ) -> Result<Self, crate::ErrorKind> {
         Ok(Self {
             writer: Writer::new(erase_on_drop, prompt)?,

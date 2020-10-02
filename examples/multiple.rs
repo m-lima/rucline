@@ -20,8 +20,8 @@ fn main() {
     // Initial prompt
     if let Ok(Some(command)) = Prompt::from(format!("{}> ", "vai".green()))
         .erase_after_read(true)
-        .suggester(Basic::new(&possible_commands))
-        .completer(Basic::new(&command_history))
+        .suggester(&Basic::new(&possible_commands))
+        .completer(&Basic::new(&command_history))
         .read_line()
     {
         // Accept command if it exists
@@ -32,7 +32,7 @@ fn main() {
                 "vai".green(),
                 command.as_str().bright_green()
             ))
-            .completer(Basic::new(&mode_history))
+            .completer(&Basic::new(&mode_history))
             .read_line()
             {
                 // We will do as commanded
