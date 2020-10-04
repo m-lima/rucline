@@ -1,5 +1,6 @@
 // TODO: Support tabs and other variable width characters
 // TODO: Support buffers with line breaks (https://en.wikipedia.org/wiki/Newline#Unicode)
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub(super) struct CharString(Vec<char>);
 
 impl CharString {

@@ -17,7 +17,7 @@
 //! let mut bindings = KeyBindings::new();
 //! bindings.insert(Event::from(KeyCode::Tab), Action::Write('\t'));
 //!
-//! let prompt = Prompt::new().overrider(bindings);
+//! let prompt = Prompt::new().overrider(&bindings);
 //! ```
 //!
 //! ```
@@ -25,7 +25,7 @@
 //! use rucline::actions::{Action, Context, Event, KeyBindings};
 //! use crossterm::event::KeyCode;
 //!
-//! let prompt = Prompt::new().overrider(|e, _: &dyn Context| if e == Event::from(KeyCode::Tab) {
+//! let prompt = Prompt::new().overrider(&|e, _: &dyn Context| if e == Event::from(KeyCode::Tab) {
 //!     Some(Action::Write('\t'))
 //! } else {
 //!     None
@@ -203,7 +203,7 @@ pub enum Direction {
 /// use rucline::actions::{Action, Context, Event};
 /// use crossterm::event::KeyCode;
 ///
-/// let prompt = Prompt::new().overrider(|e, _: &dyn Context| if e == Event::from(KeyCode::Tab) {
+/// let prompt = Prompt::new().overrider(&|e, _: &dyn Context| if e == Event::from(KeyCode::Tab) {
 ///     Some(Action::Write('\t'))
 /// } else {
 ///     None
@@ -243,7 +243,7 @@ where
 }
 
 pub(super) fn action_for(
-    overrides: &Option<Box<dyn Overrider>>,
+    overrides: Option<&dyn Overrider>,
     event: Event,
     context: &impl Context,
 ) -> Action {
@@ -378,7 +378,7 @@ mod test {
     #[test]
     fn should_default_if_no_mapping() {
         use crossterm::event::KeyCode::Tab;
-        let action = action_for(&None, Event::from(Tab), &Mock::empty());
+        let action = action_for(None, Event::from(Tab), &Mock::empty());
         assert_eq!(action, Action::Suggest(Direction::Forward));
     }
 
@@ -389,8 +389,8 @@ mod test {
 
         #[test]
         fn should_default_if_event_missing_form_mapping() {
-            let overrider = Box::new(KeyBindings::new());
-            let action = action_for(&Some(overrider), Event::from(Tab), &Mock::empty());
+            let overrider = KeyBindings::new();
+            let action = action_for(Some(&overrider), Event::from(Tab), &Mock::empty());
             assert_eq!(action, Action::Suggest(Direction::Forward));
         }
 
@@ -398,8 +398,7 @@ mod test {
         fn should_override_if_defined() {
             let mut bindings = KeyBindings::new();
             bindings.insert(Event::from(Tab), Action::Write('\t'));
-            let overrider = Box::new(bindings);
-            let action = action_for(&Some(overrider), Event::from(Tab), &Mock::empty());
+            let action = action_for(Some(&bindings), Event::from(Tab), &Mock::empty());
             assert_eq!(action, Action::Write('\t'));
         }
     }
@@ -411,21 +410,21 @@ mod test {
 
         #[test]
         fn should_default_if_event_missing_form_mapping() {
-            let overrider = Box::new(|_, _: &dyn Context| None);
-            let action = action_for(&Some(overrider), Event::from(Tab), &Mock::empty());
+            let overrider = |_, _: &dyn Context| None;
+            let action = action_for(Some(&overrider), Event::from(Tab), &Mock::empty());
             assert_eq!(action, Action::Suggest(Direction::Forward));
         }
 
         #[test]
         fn should_override_if_defined() {
-            let overrider = Box::new(|e, _: &dyn Context| {
+            let overrider = |e, _: &dyn Context| {
                 if e == Event::from(Tab) {
                     Some(Action::Write('\t'))
                 } else {
                     None
                 }
-            });
-            let action = action_for(&Some(overrider), Event::from(Tab), &Mock::empty());
+            };
+            let action = action_for(Some(&overrider), Event::from(Tab), &Mock::empty());
             assert_eq!(action, Action::Write('\t'));
         }
     }

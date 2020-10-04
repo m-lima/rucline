@@ -1,8 +1,27 @@
 use colored::Colorize;
+use crossterm::event::{KeyCode, KeyModifiers};
 
+use rucline::actions::{Action, Event, Overrider};
 use rucline::completion::Basic;
-use rucline::Prompt;
+use rucline::{Context, Prompt};
 
+struct EarlyExit;
+
+impl Overrider for EarlyExit {
+    fn override_for(&self, event: Event, _: &dyn Context) -> Option<Action> {
+        if event.modifiers == KeyModifiers::CONTROL {
+            if let KeyCode::Char('d') = event.code {
+                // Cleanly exit when the combination CTRL+D is pressed
+                quit::with_code(0);
+            }
+        }
+
+        // Fallback to default action
+        None
+    }
+}
+
+#[quit::main]
 fn main() {
     // Simulate a list of acceptable inputs
     let possible_commands = vec!["run", "walk", "fly"];
@@ -22,6 +41,7 @@ fn main() {
         .erase_after_read(true)
         .suggester(&Basic::new(&possible_commands))
         .completer(&Basic::new(&command_history))
+        .overrider(&EarlyExit)
         .read_line()
     {
         // Accept command if it exists
@@ -33,6 +53,7 @@ fn main() {
                 command.as_str().bright_green()
             ))
             .completer(&Basic::new(&mode_history))
+            .overrider(&EarlyExit)
             .read_line()
             {
                 // We will do as commanded

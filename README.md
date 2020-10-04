@@ -20,7 +20,7 @@ use rucline::Prompt;
 
 if let Ok(Some(string)) = Prompt::from("What's you favorite website? ")
     // Add some tab completions (Optional)
-    .suggester(completion::Basic::new(&[
+    .suggester(&completion::Basic::new(&[
         "https://www.rust-lang.org/",
         "https://docs.rs/",
         "https://crates.io/",
@@ -38,7 +38,7 @@ Rucline's behavior can be customized and composed with use of [`actions`].
 
 There is a built-in set of default [`actions`] that will be executed upon user interaction.
 These are meant to feel natural when coming from the default terminal, while also adding further
-functionality and editing commands. For example, a few of the build-ins:
+functionality and editing commands. For example, a few of the built-ins:
 * `Tab`: cycle through completions
 * `Shift` + `Tab`: cycle through completions in reverse
 * `CTRL` + `W`: delete the current work
@@ -68,13 +68,13 @@ bindings.insert(Event::from(KeyCode::Right), Action::Complete(Range::Line));
 
 if let Ok(Some(string)) = Prompt::from("What's you favorite website? ")
     // Add some likely values as completions
-    .completer(completion::Basic::new(&[
+    .completer(&completion::Basic::new(&[
         "https://www.rust-lang.org/",
         "https://docs.rs/",
         "https://crates.io/",
     ]))
     // Set the new key bindings as an override
-    .overrider(bindings)
+    .overrider(&bindings)
     //Block until value is ready
     .read_line()
 {
