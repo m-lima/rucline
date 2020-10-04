@@ -90,6 +90,7 @@ pub mod prompt;
 pub use context::Context;
 pub use prompt::Prompt;
 
+pub use crossterm;
 pub use crossterm::ErrorKind;
 
 #[cfg(test)]
