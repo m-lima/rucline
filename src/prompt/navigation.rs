@@ -87,7 +87,7 @@ mod test {
 
     struct Tester {
         direction: Direction,
-        scenarios: [&'static str; 8],
+        scenarios: [&'static str; 10],
     }
 
     impl Tester {
@@ -103,6 +103,8 @@ mod test {
                     "AddZ AdZ  AZ \t  O AZ  AdZ   AddZ",
                     "AddZ AdZ  AZ \t 😀 AZ  AdZ   AddZ",
                     "AddZ AdZ  AZ😀AZ \t  O AZ  AdZ   AddZ",
+                    "AddZ AdZ  AZ \t 🇧🇷 AZ  AdZ   AddZ",
+                    "AddZ AdZ  AZ🇧🇷AZ \t  O AZ  AdZ   AddZ",
                 ],
             }
         }
@@ -168,7 +170,7 @@ mod test {
         let tester = Tester::prepare(Direction::Forward);
         tester.test(super::next_word, |pivot, string| {
             let c = string[pivot..].chars().next().unwrap();
-            c == 'A' || c == 'O' || c == '😀'
+            c == 'A' || c == 'O' || c == '😀' || c == '🇧'
         });
     }
 
@@ -177,7 +179,7 @@ mod test {
         let tester = Tester::prepare(Direction::Backward);
         tester.test(super::previous_word, |pivot, string| {
             let c = string[pivot..].chars().next().unwrap();
-            c == 'A' || c == 'O' || c == '😀'
+            c == 'A' || c == 'O' || c == '😀' || c == '🇧'
         });
     }
 
@@ -186,8 +188,18 @@ mod test {
         let tester = Tester::prepare(Direction::Backward);
         tester.test(super::previous_word_end, |pivot, string| {
             let c = string[..pivot].chars().next_back().unwrap();
-            c == 'Z' || c == 'O' || c == '😀'
+            c == 'Z' || c == 'O' || c == '😀' || c == '🇷'
         });
+    }
+
+    #[test]
+    fn within_multiple_unicode_scalar_values() {
+        let string = "ab 🇧🇷 cd";
+        let pivot = "ab 🇧🇷".len() - 4;
+
+        assert_eq!(super::next_word(pivot, string), "ab 🇧🇷 ".len());
+        assert_eq!(super::previous_word(pivot, string), "ab ".len());
+        assert_eq!(super::previous_word_end(pivot, string), "ab".len());
     }
 
     #[test]

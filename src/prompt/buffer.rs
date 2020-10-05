@@ -567,7 +567,7 @@ mod test {
         fn within_multiple_unicode_scalar_values() {
             let mut buffer = build_uut("asdf  🇧🇷  yoo");
 
-            let cursor = set_cursor(&mut buffer, "asdf  X_  yoo");
+            let cursor = set_cursor(&mut buffer, "asdf  🇧_  yoo");
             buffer.delete(Scope::Relative(Range::Word, Direction::Forward));
             assert_eq!(buffer.cursor, cursor);
             assert_eq!(&buffer.string, "asdf  🇧yoo");
