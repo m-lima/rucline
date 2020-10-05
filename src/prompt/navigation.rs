@@ -1,4 +1,4 @@
-pub(super) fn next_codepoint(index: usize, string: &str) -> usize {
+pub(super) fn next_scalar_value(index: usize, string: &str) -> usize {
     if let Some((offset, _)) = string[index..].char_indices().nth(1) {
         index + offset
     } else {
@@ -6,7 +6,7 @@ pub(super) fn next_codepoint(index: usize, string: &str) -> usize {
     }
 }
 
-pub(super) fn previous_codepoint(index: usize, string: &str) -> usize {
+pub(super) fn previous_scalar_value(index: usize, string: &str) -> usize {
     if let Some((new_index, _)) = string[..index].char_indices().next_back() {
         new_index
     } else {
@@ -191,59 +191,59 @@ mod test {
     }
 
     #[test]
-    fn next_codepoint() {
-        use super::next_codepoint;
+    fn next_scalar_value() {
+        use super::next_scalar_value;
 
         let string = "a😀øé🇧🇷";
         let mut index = 0;
-        index = next_codepoint(index, string);
+        index = next_scalar_value(index, string);
         assert_eq!(string[index..].chars().next().unwrap(), '😀');
-        index = next_codepoint(index, string);
+        index = next_scalar_value(index, string);
         assert_eq!(string[index..].chars().next().unwrap(), 'ø');
-        index = next_codepoint(index, string);
+        index = next_scalar_value(index, string);
         assert_eq!(string[index..].chars().next().unwrap(), 'é');
-        index = next_codepoint(index, string);
+        index = next_scalar_value(index, string);
         assert_eq!(
             string[index..].chars().next().unwrap(),
             "🇧🇷".chars().next().unwrap()
         );
-        index = next_codepoint(index, string);
+        index = next_scalar_value(index, string);
         assert_eq!(
             string[index..].chars().next().unwrap(),
             "🇧🇷".chars().nth(1).unwrap()
         );
-        index = next_codepoint(index, string);
+        index = next_scalar_value(index, string);
         assert_eq!(index, string.len());
-        index = next_codepoint(index, string);
+        index = next_scalar_value(index, string);
         assert_eq!(index, string.len());
     }
 
     #[test]
-    fn previous_codepoint() {
-        use super::previous_codepoint;
+    fn previous_scalar_value() {
+        use super::previous_scalar_value;
 
         let string = "a😀øé🇧🇷";
         let mut index = string.len();
-        index = previous_codepoint(index, string);
+        index = previous_scalar_value(index, string);
         assert_eq!(
             string[index..].chars().next().unwrap(),
             "🇧🇷".chars().nth(1).unwrap()
         );
-        index = previous_codepoint(index, string);
+        index = previous_scalar_value(index, string);
         assert_eq!(
             string[index..].chars().next().unwrap(),
             "🇧🇷".chars().next().unwrap()
         );
-        index = previous_codepoint(index, string);
+        index = previous_scalar_value(index, string);
         assert_eq!(string[index..].chars().next().unwrap(), 'é');
-        index = previous_codepoint(index, string);
+        index = previous_scalar_value(index, string);
         assert_eq!(string[index..].chars().next().unwrap(), 'ø');
-        index = previous_codepoint(index, string);
+        index = previous_scalar_value(index, string);
         assert_eq!(string[index..].chars().next().unwrap(), '😀');
-        index = previous_codepoint(index, string);
+        index = previous_scalar_value(index, string);
         assert_eq!(index, 0);
         assert_eq!(string[index..].chars().next().unwrap(), 'a');
-        index = previous_codepoint(index, string);
+        index = previous_scalar_value(index, string);
         assert_eq!(index, 0);
     }
 }

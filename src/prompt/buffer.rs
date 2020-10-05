@@ -118,10 +118,10 @@ impl Buffer {
 
         match (range, direction) {
             (Single, Backward) => {
-                self.cursor = super::navigation::previous_codepoint(self.cursor, &self.string);
+                self.cursor = super::navigation::previous_scalar_value(self.cursor, &self.string);
             }
             (Single, Forward) => {
-                self.cursor = super::navigation::next_codepoint(self.cursor, &self.string);
+                self.cursor = super::navigation::next_scalar_value(self.cursor, &self.string);
             }
             (Word, Backward) => {
                 self.cursor = super::navigation::previous_word(self.cursor, &self.string);
@@ -165,6 +165,8 @@ impl std::convert::From<&str> for Buffer {
     }
 }
 
+// Allowed because it makes test clearer
+#[allow(clippy::non_ascii_literal)]
 #[cfg(test)]
 mod test {
     use super::{Buffer, Direction, Range, Scope};
@@ -173,66 +175,128 @@ mod test {
         Buffer::from(string)
     }
 
-    fn set_cursor(buffer: &mut Buffer, string: &str) {
+    fn set_cursor(buffer: &mut Buffer, string: &str) -> usize {
         buffer.cursor = string.find('_').unwrap();
+        buffer.cursor
     }
 
-    #[test]
-    fn delete_char_forward() {
-        let mut buffer = build_uut("asdf bas  as   v as  bas   asdf");
+    mod delete_char_forward {
+        use super::{build_uut, set_cursor, Direction, Range, Scope};
 
-        // Delete from the middle
-        set_cursor(&mut buffer, "asdf b_s  as   v as  bas   asdf");
-        buffer.delete(Scope::Relative(Range::Single, Direction::Forward));
-        assert_eq!(buffer.cursor, 6);
-        assert_eq!(buffer.string.as_str(), "asdf bs  as   v as  bas   asdf");
+        #[test]
+        fn from_middle() {
+            let mut buffer = build_uut("asdf bas  as");
 
-        // Delete from the end
-        set_cursor(&mut buffer, "asdf bs  as   v as  bas   asd_");
-        buffer.delete(Scope::Relative(Range::Single, Direction::Forward));
-        assert_eq!(buffer.cursor, 29);
-        assert_eq!(buffer.string.as_str(), "asdf bs  as   v as  bas   asd");
+            let cursor = set_cursor(&mut buffer, "asdf b_s  as");
+            buffer.delete(Scope::Relative(Range::Single, Direction::Forward));
+            assert_eq!(buffer.cursor, cursor);
+            assert_eq!(&buffer.string, "asdf bs  as");
+        }
 
-        // Delete from past the end
-        set_cursor(&mut buffer, "asdf bs  as   v as  bas   asd_");
-        buffer.delete(Scope::Relative(Range::Single, Direction::Forward));
-        assert_eq!(buffer.cursor, 29);
-        assert_eq!(buffer.string.as_str(), "asdf bs  as   v as  bas   asd");
+        #[test]
+        fn from_end() {
+            let mut buffer = build_uut("asdf bas  as");
 
-        // Delete from the start
-        set_cursor(&mut buffer, "_sdf bs  as   v as  bas   asd");
-        buffer.delete(Scope::Relative(Range::Single, Direction::Forward));
-        assert_eq!(buffer.cursor, 0);
-        assert_eq!(buffer.string.as_str(), "sdf bs  as   v as  bas   asd");
+            set_cursor(&mut buffer, "asdf bas  a_");
+            buffer.delete(Scope::Relative(Range::Single, Direction::Forward));
+            assert_eq!(buffer.cursor, buffer.len());
+            assert_eq!(&buffer.string, "asdf bas  a");
+
+            // Delete from past the end
+            buffer.delete(Scope::Relative(Range::Single, Direction::Forward));
+            assert_eq!(buffer.cursor, buffer.len());
+            assert_eq!(&buffer.string, "asdf bas  a");
+        }
+
+        #[test]
+        fn from_start() {
+            let mut buffer = build_uut("asdf bas  as");
+
+            set_cursor(&mut buffer, "_sdf bas  as");
+            buffer.delete(Scope::Relative(Range::Single, Direction::Forward));
+            assert_eq!(buffer.cursor, 0);
+            assert_eq!(&buffer.string, "sdf bas  as");
+        }
+
+        #[test]
+        fn single_scalar_value() {
+            let mut buffer = build_uut("asdf b😀s  as");
+
+            let cursor = set_cursor(&mut buffer, "asdf b_s  as");
+            buffer.delete(Scope::Relative(Range::Single, Direction::Forward));
+            assert_eq!(buffer.cursor, cursor);
+            assert_eq!(&buffer.string, "asdf bs  as");
+        }
+
+        #[test]
+        fn multiple_scalar_values() {
+            let mut buffer = build_uut("asdf b🇧🇷s  as");
+
+            let cursor = set_cursor(&mut buffer, "asdf b_Xs  as");
+            buffer.delete(Scope::Relative(Range::Single, Direction::Forward));
+            assert_eq!(buffer.cursor, cursor);
+            assert_eq!(&buffer.string, "asdf b🇷s  as");
+        }
     }
 
-    #[test]
-    fn delete_char_backward() {
-        let mut buffer = build_uut("asdf bas  as   v as  bas   asdf");
+    mod delete_char_backward {
+        use super::{build_uut, set_cursor, Direction, Range, Scope};
 
-        // Delete from the middle
-        set_cursor(&mut buffer, "asdf b_s  as   v as  bas   asdf");
-        buffer.delete(Scope::Relative(Range::Single, Direction::Backward));
-        assert_eq!(buffer.cursor, 5);
-        assert_eq!(buffer.string.as_str(), "asdf as  as   v as  bas   asdf");
+        #[test]
+        fn from_middle() {
+            let mut buffer = build_uut("asdf bas  as");
 
-        // Delete from the end
-        set_cursor(&mut buffer, "asdf as  as   v as  bas   asd_");
-        buffer.delete(Scope::Relative(Range::Single, Direction::Backward));
-        assert_eq!(buffer.cursor, 28);
-        assert_eq!(buffer.string.as_str(), "asdf as  as   v as  bas   asf");
+            let cursor = set_cursor(&mut buffer, "asdf b_s  as");
+            buffer.delete(Scope::Relative(Range::Single, Direction::Backward));
+            assert_eq!(buffer.cursor, cursor - 1);
+            assert_eq!(&buffer.string, "asdf as  as");
+        }
 
-        // Delete from past the end
-        set_cursor(&mut buffer, "asdf as  as   v as  bas   asf_");
-        buffer.delete(Scope::Relative(Range::Single, Direction::Backward));
-        assert_eq!(buffer.cursor, 28);
-        assert_eq!(buffer.string.as_str(), "asdf as  as   v as  bas   as");
+        #[test]
+        fn from_end() {
+            let mut buffer = build_uut("asdf bas  as");
 
-        // Delete from the start
-        set_cursor(&mut buffer, "_sdf as  as   v as  bas   as");
-        buffer.delete(Scope::Relative(Range::Single, Direction::Backward));
-        assert_eq!(buffer.cursor, 0);
-        assert_eq!(buffer.string.as_str(), "asdf as  as   v as  bas   as");
+            let cursor = set_cursor(&mut buffer, "asdf bas  a_");
+            buffer.delete(Scope::Relative(Range::Single, Direction::Backward));
+            assert_eq!(buffer.cursor, cursor - 1);
+            assert_eq!(&buffer.string, "asdf bas  s");
+
+            // Delete from past the end
+            set_cursor(&mut buffer, "asdf bas  s_");
+            buffer.delete(Scope::Relative(Range::Single, Direction::Backward));
+            assert_eq!(buffer.cursor, buffer.len());
+            assert_eq!(&buffer.string, "asdf bas  ");
+        }
+
+        #[test]
+        fn from_start() {
+            let mut buffer = build_uut("asdf bas  as");
+
+            set_cursor(&mut buffer, "_sdf bas  as");
+            buffer.delete(Scope::Relative(Range::Single, Direction::Backward));
+            assert_eq!(buffer.cursor, 0);
+            assert_eq!(&buffer.string, "asdf bas  as");
+        }
+
+        #[test]
+        fn single_scalar_value() {
+            let mut buffer = build_uut("asdf b😀s  as");
+
+            let cursor = set_cursor(&mut buffer, "asdf b😀_  as");
+            buffer.delete(Scope::Relative(Range::Single, Direction::Backward));
+            assert_eq!(buffer.cursor, cursor - '😀'.len_utf8());
+            assert_eq!(&buffer.string, "asdf bs  as");
+        }
+
+        #[test]
+        fn multiple_scalar_values() {
+            let mut buffer = build_uut("asdf b🇧🇷s  as");
+
+            let cursor = set_cursor(&mut buffer, "asdf b🇧🇷_  as");
+            buffer.delete(Scope::Relative(Range::Single, Direction::Backward));
+            assert_eq!(buffer.cursor, cursor - 4);
+            assert_eq!(&buffer.string, "asdf b🇧s  as");
+        }
     }
 
     #[test]
@@ -243,37 +307,37 @@ mod test {
         set_cursor(&mut buffer, "as_f bas  as   v as  bas   asdf");
         buffer.delete(Scope::Relative(Range::Word, Direction::Forward));
         assert_eq!(buffer.cursor, 2);
-        assert_eq!(buffer.string.as_str(), "asbas  as   v as  bas   asdf");
+        assert_eq!(&buffer.string, "asbas  as   v as  bas   asdf");
 
         // Delete single letter word
         set_cursor(&mut buffer, "asbas  as   _ as  bas   asdf");
         buffer.delete(Scope::Relative(Range::Word, Direction::Forward));
         assert_eq!(buffer.cursor, 12);
-        assert_eq!(buffer.string.as_str(), "asbas  as   as  bas   asdf");
+        assert_eq!(&buffer.string, "asbas  as   as  bas   asdf");
 
         // Delete from space
         set_cursor(&mut buffer, "asbas  as _ as  bas   asdf");
         buffer.delete(Scope::Relative(Range::Word, Direction::Forward));
         assert_eq!(buffer.cursor, 10);
-        assert_eq!(buffer.string.as_str(), "asbas  as as  bas   asdf");
+        assert_eq!(&buffer.string, "asbas  as as  bas   asdf");
 
         // Delete from the end
         set_cursor(&mut buffer, "asbas  as as  bas   asd_");
         buffer.delete(Scope::Relative(Range::Word, Direction::Forward));
         assert_eq!(buffer.cursor, 23);
-        assert_eq!(buffer.string.as_str(), "asbas  as as  bas   asd");
+        assert_eq!(&buffer.string, "asbas  as as  bas   asd");
 
         // Delete from past the end
         set_cursor(&mut buffer, "asbas  as as  bas   asd_");
         buffer.delete(Scope::Relative(Range::Word, Direction::Forward));
         assert_eq!(buffer.cursor, 23);
-        assert_eq!(buffer.string.as_str(), "asbas  as as  bas   asd");
+        assert_eq!(&buffer.string, "asbas  as as  bas   asd");
 
         // Delete from the start
         set_cursor(&mut buffer, "_sbas  as as  bas   asd");
         buffer.delete(Scope::Relative(Range::Word, Direction::Forward));
         assert_eq!(buffer.cursor, 0);
-        assert_eq!(buffer.string.as_str(), "as as  bas   asd");
+        assert_eq!(&buffer.string, "as as  bas   asd");
     }
 
     #[test]
@@ -284,37 +348,37 @@ mod test {
         set_cursor(&mut buffer, "as_f bas  as   v as  bas   asdf");
         buffer.delete(Scope::Relative(Range::Word, Direction::Backward));
         assert_eq!(buffer.cursor, 0);
-        assert_eq!(buffer.string.as_str(), "df bas  as   v as  bas   asdf");
+        assert_eq!(&buffer.string, "df bas  as   v as  bas   asdf");
 
         // Delete single letter word
         set_cursor(&mut buffer, "df bas  as   _ as  bas   asdf");
         buffer.delete(Scope::Relative(Range::Word, Direction::Backward));
         assert_eq!(buffer.cursor, 8);
-        assert_eq!(buffer.string.as_str(), "df bas  v as  bas   asdf");
+        assert_eq!(&buffer.string, "df bas  v as  bas   asdf");
 
         // Delete from space
         set_cursor(&mut buffer, "df bas  v as  bas _ asdf");
         buffer.delete(Scope::Relative(Range::Word, Direction::Backward));
         assert_eq!(buffer.cursor, 14);
-        assert_eq!(buffer.string.as_str(), "df bas  v as    asdf");
+        assert_eq!(&buffer.string, "df bas  v as    asdf");
 
         // Delete from the end
         set_cursor(&mut buffer, "df bas  v as    asd_");
         buffer.delete(Scope::Relative(Range::Word, Direction::Backward));
         assert_eq!(buffer.cursor, 16);
-        assert_eq!(buffer.string.as_str(), "df bas  v as    f");
+        assert_eq!(&buffer.string, "df bas  v as    f");
 
         // Delete from past the end
         set_cursor(&mut buffer, "df bas  v as    f_");
         buffer.delete(Scope::Relative(Range::Word, Direction::Backward));
         assert_eq!(buffer.cursor, 16);
-        assert_eq!(buffer.string.as_str(), "df bas  v as    ");
+        assert_eq!(&buffer.string, "df bas  v as    ");
 
         // Delete from the start
         set_cursor(&mut buffer, "_f bas  v as    ");
         buffer.delete(Scope::Relative(Range::Word, Direction::Backward));
         assert_eq!(buffer.cursor, 0);
-        assert_eq!(buffer.string.as_str(), "df bas  v as    ");
+        assert_eq!(&buffer.string, "df bas  v as    ");
     }
 
     #[test]
@@ -325,25 +389,25 @@ mod test {
         set_cursor(&mut buffer, "asdf bas  as   _ as  bas   asdf");
         buffer.delete(Scope::Relative(Range::Line, Direction::Forward));
         assert_eq!(buffer.cursor, 15);
-        assert_eq!(buffer.string.as_str(), "asdf bas  as   ");
+        assert_eq!(&buffer.string, "asdf bas  as   ");
 
         // Delete from the end
         set_cursor(&mut buffer, "asdf bas  as   _");
         buffer.delete(Scope::Relative(Range::Line, Direction::Forward));
         assert_eq!(buffer.cursor, 15);
-        assert_eq!(buffer.string.as_str(), "asdf bas  as   ");
+        assert_eq!(&buffer.string, "asdf bas  as   ");
 
         // Delete from the start
         set_cursor(&mut buffer, "_sdf bas  as   ");
         buffer.delete(Scope::Relative(Range::Line, Direction::Forward));
         assert_eq!(buffer.cursor, 0);
-        assert_eq!(buffer.string.as_str(), "");
+        assert_eq!(&buffer.string, "");
 
         // Delete empty line
         set_cursor(&mut buffer, "_");
         buffer.delete(Scope::Relative(Range::Line, Direction::Forward));
         assert_eq!(buffer.cursor, 0);
-        assert_eq!(buffer.string.as_str(), "");
+        assert_eq!(&buffer.string, "");
     }
 
     #[test]
@@ -354,25 +418,25 @@ mod test {
         set_cursor(&mut buffer, "asdf bas  as   _ as  bas   asdf");
         buffer.delete(Scope::Relative(Range::Line, Direction::Backward));
         assert_eq!(buffer.cursor, 0);
-        assert_eq!(buffer.string.as_str(), "v as  bas   asdf");
+        assert_eq!(&buffer.string, "v as  bas   asdf");
 
         // Delete from the start
         set_cursor(&mut buffer, "_as  bas   asdf");
         buffer.delete(Scope::Relative(Range::Line, Direction::Backward));
         assert_eq!(buffer.cursor, 0);
-        assert_eq!(buffer.string.as_str(), "v as  bas   asdf");
+        assert_eq!(&buffer.string, "v as  bas   asdf");
 
         // Delete from the end
         set_cursor(&mut buffer, "v as  bas   asdf_");
         buffer.delete(Scope::Relative(Range::Line, Direction::Backward));
         assert_eq!(buffer.cursor, 0);
-        assert_eq!(buffer.string.as_str(), "");
+        assert_eq!(&buffer.string, "");
 
         // Delete empty line
         set_cursor(&mut buffer, "_");
         buffer.delete(Scope::Relative(Range::Line, Direction::Backward));
         assert_eq!(buffer.cursor, 0);
-        assert_eq!(buffer.string.as_str(), "");
+        assert_eq!(&buffer.string, "");
     }
 
     #[test]
@@ -383,19 +447,19 @@ mod test {
         set_cursor(&mut buffer, "as_f bas  as   v as  bas   asdf");
         buffer.delete(Scope::WholeWord);
         assert_eq!(buffer.cursor, 0);
-        assert_eq!(buffer.string.as_str(), "bas  as   v as  bas   asdf");
+        assert_eq!(&buffer.string, "bas  as   v as  bas   asdf");
 
         // Delete single letter word
         set_cursor(&mut buffer, "bas  as   _ as  bas   asdf");
         buffer.delete(Scope::WholeWord);
         assert_eq!(buffer.cursor, 8);
-        assert_eq!(buffer.string.as_str(), "bas  as as  bas   asdf");
+        assert_eq!(&buffer.string, "bas  as as  bas   asdf");
 
         // Delete from space
         set_cursor(&mut buffer, "bas  as as  bas _ asdf");
         buffer.delete(Scope::WholeWord);
         assert_eq!(buffer.cursor, 16);
-        assert_eq!(buffer.string.as_str(), "bas  as as  bas asdf");
+        assert_eq!(&buffer.string, "bas  as as  bas asdf");
     }
 
     #[test]
@@ -406,12 +470,12 @@ mod test {
         set_cursor(&mut buffer, "asdf bas  as   _ as  bas   asdf");
         buffer.delete(Scope::WholeLine);
         assert_eq!(buffer.cursor, 0);
-        assert_eq!(buffer.string.as_str(), "");
+        assert_eq!(&buffer.string, "");
 
         // Delete empty line
         set_cursor(&mut buffer, "_");
         buffer.delete(Scope::WholeLine);
         assert_eq!(buffer.cursor, 0);
-        assert_eq!(buffer.string.as_str(), "");
+        assert_eq!(&buffer.string, "");
     }
 }
