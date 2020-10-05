@@ -9,18 +9,18 @@
 
 Rucline, the Rust CLI Line reader, or simply "recline", is a cross-platform, UTF-8 compatible
 line reader that provides hooks for autocompletion and tab suggestion. It supports advanced
-editing [`actions`] and hooks for customizing the line reader behavior of the line reader making
-it more flexible than simply reading from `stdin`.
+editing [`actions`] and hooks for customizing the line reader behavior making it more flexible
+than simply reading from `stdin`.
 
 #### Basic usage:
 
 ```rust
-use rucline::completion;
+use rucline::completion::Basic;
 use rucline::Prompt;
 
 if let Ok(Some(string)) = Prompt::from("What's you favorite website? ")
     // Add some tab completions (Optional)
-    .suggester(&completion::Basic::new(&[
+    .suggester(&Basic::new(&[
         "https://www.rust-lang.org/",
         "https://docs.rs/",
         "https://crates.io/",
@@ -41,12 +41,12 @@ These are meant to feel natural when coming from the default terminal, while als
 functionality and editing commands. For example, a few of the built-ins:
 * `Tab`: cycle through completions
 * `Shift` + `Tab`: cycle through completions in reverse
-* `CTRL` + `W`: delete the current work
-* `CTRL` + `J`: delete the beginning of the word
-* `CTRL` + `K`: delete the end of the word
-* `CTRL` + `U`: delete the line
-* `CTRL` + `H`: delete the beggining of the line
-* `CTRL` + `L`: delete the end of the line
+* `CTRL` + `W`: delete the current word
+* `CTRL` + `J`: delete until the beginning of the word
+* `CTRL` + `K`: delete until the end of the word
+* `CTRL` + `U`: delete the whole line
+* `CTRL` + `H`: delete until the beggining of the line
+* `CTRL` + `L`: delete until the end of the line
 
 > See [`Action`][`actions`] for the full default behavior specification
 
@@ -57,7 +57,7 @@ in turn can be serialized, stored, and loaded at run-time.
 #### Overriding key bindings
 
 ```rust
-use rucline::{completion, Prompt};
+use rucline::{completion::Basic, Prompt};
 use rucline::actions::{Action, Event, KeyBindings, Range};
 use crossterm::event::KeyCode;
 
@@ -68,7 +68,7 @@ bindings.insert(Event::from(KeyCode::Right), Action::Complete(Range::Line));
 
 if let Ok(Some(string)) = Prompt::from("What's you favorite website? ")
     // Add some likely values as completions
-    .completer(&completion::Basic::new(&[
+    .completer(&Basic::new(&[
         "https://www.rust-lang.org/",
         "https://docs.rs/",
         "https://crates.io/",
