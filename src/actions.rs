@@ -116,6 +116,8 @@
 //! # }}
 //! ```
 //!
+//!  > Check the test cases for `Buffer` to see how the line editor is expected to behave
+//!
 //! [`Prompt`]: ../prompt/struct.Prompt.html
 //! [`KeyBindings`]: type.KeyBindings.html
 //! [`Event`]: type.Event.html
