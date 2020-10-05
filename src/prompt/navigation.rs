@@ -66,6 +66,8 @@ pub(super) fn previous_word_end(pivot: usize, string: &str) -> usize {
     }
 }
 
+// Allowed because it makes test clearer
+#[allow(clippy::non_ascii_literal)]
 #[cfg(test)]
 mod test {
     #[derive(Copy, Clone)]
@@ -85,7 +87,7 @@ mod test {
 
     struct Tester {
         direction: Direction,
-        scenarios: [&'static str; 6],
+        scenarios: [&'static str; 8],
     }
 
     impl Tester {
@@ -99,6 +101,8 @@ mod test {
                     "   \t   AddZ",
                     "   \t   AddZ   \t   ",
                     "AddZ AdZ  AZ \t  O AZ  AdZ   AddZ",
+                    "AddZ AdZ  AZ \t 😀 AZ  AdZ   AddZ",
+                    "AddZ AdZ  AZ😀AZ \t  O AZ  AdZ   AddZ",
                 ],
             }
         }
@@ -164,7 +168,7 @@ mod test {
         let tester = Tester::prepare(Direction::Forward);
         tester.test(super::next_word, |pivot, string| {
             let c = string[pivot..].chars().next().unwrap();
-            c == 'A' || c == 'O'
+            c == 'A' || c == 'O' || c == '😀'
         });
     }
 
@@ -173,7 +177,7 @@ mod test {
         let tester = Tester::prepare(Direction::Backward);
         tester.test(super::previous_word, |pivot, string| {
             let c = string[pivot..].chars().next().unwrap();
-            c == 'A' || c == 'O'
+            c == 'A' || c == 'O' || c == '😀'
         });
     }
 
@@ -182,7 +186,7 @@ mod test {
         let tester = Tester::prepare(Direction::Backward);
         tester.test(super::previous_word_end, |pivot, string| {
             let c = string[..pivot].chars().next_back().unwrap();
-            c == 'Z' || c == 'O'
+            c == 'Z' || c == 'O' || c == '😀'
         });
     }
 }
