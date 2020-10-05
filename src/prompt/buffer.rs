@@ -21,12 +21,6 @@ impl Buffer {
         Buffer::default()
     }
 
-    /// Returns the buffer contents.
-    #[inline]
-    pub(super) fn as_str(&self) -> &str {
-        &self.string
-    }
-
     /// Returns the current position of the cursor.
     #[inline]
     pub(super) fn cursor(&self) -> usize {

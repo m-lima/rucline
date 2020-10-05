@@ -18,7 +18,7 @@ impl Writer {
 
         let erase_on_drop = if erase_on_drop {
             prompt
-                .map(unicode_width::UnicodeWidthStr::width)
+                .map(|s| unicode_segmentation::UnicodeSegmentation::graphemes(s, true).count())
                 .or(Some(0))
         } else {
             None
@@ -37,23 +37,22 @@ impl Writer {
         completion: Option<&str>,
     ) -> Result<(), crate::ErrorKind> {
         use std::io::Write;
-        use unicode_width::UnicodeWidthStr;
+        use unicode_segmentation::UnicodeSegmentation;
 
         let mut stdout = std::io::stdout();
-        let buffer_string = buffer.as_str();
 
         clear_from(&mut stdout, self.printed_length - self.cursor_offset)?;
 
-        self.printed_length = UnicodeWidthStr::width(buffer_string);
+        self.printed_length = buffer.graphemes(true).count();
         self.cursor_offset =
-            self.printed_length - UnicodeWidthStr::width(&buffer_string[0..buffer.cursor()]);
+            self.printed_length - buffer[0..buffer.cursor()].graphemes(true).count();
 
         crossterm::queue!(&mut stdout, crossterm::style::Print(&buffer))?;
 
         if let Some(completion) = completion {
             use crossterm::style::Colorize;
 
-            let completion_len = UnicodeWidthStr::width(completion);
+            let completion_len = completion.graphemes(true).count();
             crossterm::queue!(
                 &mut stdout,
                 crossterm::style::PrintStyledContent(crossterm::style::style(completion).blue())
@@ -71,7 +70,7 @@ impl Writer {
         suggestions: &[&str],
     ) -> Result<(), crate::ErrorKind> {
         use std::io::Write;
-        use unicode_width::UnicodeWidthStr;
+        use unicode_segmentation::UnicodeSegmentation;
 
         let mut stdout = std::io::stdout();
 
@@ -80,7 +79,7 @@ impl Writer {
         clear_from(&mut stdout, self.printed_length - self.cursor_offset)?;
         crossterm::queue!(stdout, crossterm::style::Print(buffer))?;
         self.cursor_offset = 0;
-        self.printed_length = UnicodeWidthStr::width(buffer);
+        self.printed_length = buffer.graphemes(true).count();
 
         // Save position at the end of the buffer
         // TODO: avoid this save and the later restore
@@ -110,7 +109,7 @@ impl Writer {
 
         // Rewind suggestions cursor
         for suggestion in suggestions.iter().rev() {
-            let length = UnicodeWidthStr::width(*suggestion);
+            let length = suggestion.graphemes(true).count();
             rewind_cursor(&mut stdout, length)?;
             crossterm::queue!(stdout, crossterm::cursor::MoveUp(1))?;
         }
