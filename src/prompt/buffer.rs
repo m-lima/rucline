@@ -180,8 +180,146 @@ mod test {
         buffer.cursor
     }
 
+    mod insert_char {
+        use super::{build_uut, set_cursor};
+
+        #[test]
+        fn empty() {
+            let mut buffer = build_uut("");
+
+            buffer.write('a');
+            assert_eq!(buffer.cursor, 1);
+            assert_eq!(&buffer.string, "a");
+        }
+
+        #[test]
+        fn in_middle() {
+            let mut buffer = build_uut("asdf bas  as");
+
+            let cursor = set_cursor(&mut buffer, "asdf b_s  as");
+            buffer.write('x');
+            assert_eq!(buffer.cursor, cursor + 1);
+            assert_eq!(&buffer.string, "asdf bxas  as");
+        }
+
+        #[test]
+        fn at_end() {
+            let mut buffer = build_uut("asdf bas  as");
+
+            let cursor = set_cursor(&mut buffer, "asdf bas  as_");
+            buffer.write('x');
+            assert_eq!(buffer.cursor, cursor + 1);
+            assert_eq!(&buffer.string, "asdf bas  asx");
+        }
+
+        #[test]
+        fn at_start() {
+            let mut buffer = build_uut("asdf bas  as");
+
+            let cursor = set_cursor(&mut buffer, "_sdf bas  as");
+            buffer.write('x');
+            assert_eq!(buffer.cursor, cursor + 1);
+            assert_eq!(&buffer.string, "xasdf bas  as");
+        }
+
+        #[test]
+        fn insert_scalar() {
+            let mut buffer = build_uut("asdf bas  as");
+
+            let cursor = set_cursor(&mut buffer, "asdf b_s  as");
+            buffer.write('😀');
+            assert_eq!(buffer.cursor, cursor + 4);
+            assert_eq!(&buffer.string, "asdf b😀as  as");
+        }
+
+        #[test]
+        fn insert_multiple_scalars() {
+            let mut buffer = build_uut("asdf bas  as");
+
+            let cursor = set_cursor(&mut buffer, "asdf b_s  as");
+            buffer.write('🇧');
+            assert_eq!(buffer.cursor, cursor + 4);
+            assert_eq!(&buffer.string, "asdf b🇧as  as");
+            buffer.write('🇷');
+            assert_eq!(buffer.cursor, cursor + 8);
+            assert_eq!(&buffer.string, "asdf b🇧🇷as  as");
+        }
+    }
+
+    mod insert_str {
+        use super::{build_uut, set_cursor};
+
+        #[test]
+        fn empty() {
+            let mut buffer = build_uut("");
+
+            buffer.write_str("yoo");
+            assert_eq!(buffer.cursor, 3);
+            assert_eq!(&buffer.string, "yoo");
+        }
+
+        #[test]
+        fn in_middle() {
+            let mut buffer = build_uut("asdf bas  as");
+
+            let cursor = set_cursor(&mut buffer, "asdf b_s  as");
+            buffer.write_str("yoo");
+            assert_eq!(buffer.cursor, cursor + 3);
+            assert_eq!(&buffer.string, "asdf byooas  as");
+        }
+
+        #[test]
+        fn at_end() {
+            let mut buffer = build_uut("asdf bas  as");
+
+            let cursor = set_cursor(&mut buffer, "asdf bas  as_");
+            buffer.write_str("yoo");
+            assert_eq!(buffer.cursor, cursor + 3);
+            assert_eq!(&buffer.string, "asdf bas  asyoo");
+        }
+
+        #[test]
+        fn at_start() {
+            let mut buffer = build_uut("asdf bas  as");
+
+            let cursor = set_cursor(&mut buffer, "_sdf bas  as");
+            buffer.write_str("yoo");
+            assert_eq!(buffer.cursor, cursor + 3);
+            assert_eq!(&buffer.string, "yooasdf bas  as");
+        }
+
+        #[test]
+        fn insert_scalar() {
+            let mut buffer = build_uut("asdf bas  as");
+
+            let cursor = set_cursor(&mut buffer, "asdf b_s  as");
+            buffer.write_str("😀");
+            assert_eq!(buffer.cursor, cursor + 4);
+            assert_eq!(&buffer.string, "asdf b😀as  as");
+        }
+
+        #[test]
+        fn insert_multiple_scalars() {
+            let mut buffer = build_uut("asdf bas  as");
+
+            let cursor = set_cursor(&mut buffer, "asdf b_s  as");
+            buffer.write_str("🇧🇷");
+            assert_eq!(buffer.cursor, cursor + 8);
+            assert_eq!(&buffer.string, "asdf b🇧🇷as  as");
+        }
+    }
+
     mod delete_char_forward {
         use super::{build_uut, set_cursor, Direction, Range, Scope};
+
+        #[test]
+        fn empty() {
+            let mut buffer = build_uut("");
+
+            buffer.delete(Scope::Relative(Range::Single, Direction::Forward));
+            assert_eq!(buffer.cursor, 0);
+            assert_eq!(&buffer.string, "");
+        }
 
         #[test]
         fn from_middle() {
@@ -241,6 +379,15 @@ mod test {
 
     mod delete_char_backward {
         use super::{build_uut, set_cursor, Direction, Range, Scope};
+
+        #[test]
+        fn empty() {
+            let mut buffer = build_uut("");
+
+            buffer.delete(Scope::Relative(Range::Single, Direction::Backward));
+            assert_eq!(buffer.cursor, 0);
+            assert_eq!(&buffer.string, "");
+        }
 
         #[test]
         fn from_middle() {
