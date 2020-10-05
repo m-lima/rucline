@@ -1,6 +1,6 @@
 use super::Buffer;
 
-// TODO: Keep track of lines (account for line breaks in CharString)
+// TODO: Keep track of lines
 pub(super) struct Writer {
     erase_on_drop: Option<usize>,
     printed_length: usize,

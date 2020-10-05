@@ -280,7 +280,6 @@ fn complete_if_at_end_else_move(context: &impl Context, range: Range) -> Action 
     }
 }
 
-// TODO: Investigate '\n' being parsed and 'ENTER'
 fn default_action(event: Event, context: &impl Context) -> Action {
     use crossterm::event::KeyCode;
     use Action::{Accept, Cancel, Delete, Move, Noop, Suggest, Write};
