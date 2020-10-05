@@ -14,7 +14,7 @@
 //! ```no_run
 //! use rucline::completion::{Completer, Context};
 //!
-//! struct Basic(Vec<Vec<char>>);
+//! struct Basic(Vec<String>);
 //! impl Completer for Basic {
 //!   fn complete_for(&self, context: &dyn Context) -> Option<&str> {
 //!       let buffer = context.buffer();
@@ -35,10 +35,10 @@
 //! ```no_run
 //! use rucline::completion::{Context, Suggester};
 //!
-//! struct Basic(Vec<Vec<char>>);
+//! struct Basic(Vec<String>);
 //! impl Suggester for Basic {
 //!   fn suggest_for(&self, context: &dyn Context) -> Vec<&str> {
-//!       self.0.iter().map(Vec::as_slice).collect::<Vec<_>>()
+//!       self.0.iter().map(String::as_str).collect()
 //!   }
 //! }
 //! ```
@@ -48,15 +48,11 @@
 //! ```no_run
 //! use rucline::completion::{Context, Lambda};
 //!
-//! let completions: Vec<Vec<char>> = ["abc", "def", "example word", "weird \"˚∆˙\""]
-//!    .iter()
-//!    .map(|s| s.chars().collect())
-//!    .collect();
-//!let completer = Lambda::from(|c: &dyn Context| {
+//! let completions = ["abc", "def", "example word", "weird \"˚∆˙\""];
+//! let completer = Lambda::from(|c: &dyn Context| {
 //!    completions
 //!        .iter()
-//!        .filter(|s| s.starts_with(c.buffer()))
-//!        .map(Vec::as_slice)
+//!        .filter_map(|s| if s.starts_with(c.buffer()) { Some(*s) } else { None })
 //!        .collect::<Vec<_>>()
 //!});
 //! ```
@@ -89,7 +85,7 @@ pub use crate::Context;
 /// ```no_run
 /// use rucline::completion::{Completer, Context};
 ///
-/// struct Basic(Vec<Vec<char>>);
+/// struct Basic(Vec<String>);
 /// impl Completer for Basic {
 ///   fn complete_for(&self, context: &dyn Context) -> Option<&str> {
 ///       let buffer = context.buffer();
@@ -163,10 +159,10 @@ pub trait Suggester {
     /// Basic implementation:
     ///
     /// ```no_run
-    /// # struct Basic(Vec<Vec<char>>);
+    /// # struct Basic(Vec<String>);
     /// # impl rucline::completion::Suggester for Basic {
     ///  fn suggest_for(&self, _: &dyn rucline::Context) -> Vec<&str> {
-    ///     self.0.iter().map(Vec::as_slice).collect::<Vec<_>>()
+    ///     self.0.iter().map(String::as_str).collect()
     /// }
     /// # }
     /// ```
@@ -311,7 +307,7 @@ impl Completer for Basic {
 
 impl Suggester for Basic {
     fn suggest_for(&self, _: &dyn Context) -> Vec<&str> {
-        self.0.iter().map(String::as_str).collect::<Vec<_>>()
+        self.0.iter().map(String::as_str).collect()
     }
 }
 
