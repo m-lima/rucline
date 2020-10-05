@@ -1,10 +1,33 @@
+pub(super) fn next_codepoint(index: usize, string: &str) -> usize {
+    if let Some((offset, _)) = string[index..].char_indices().nth(1) {
+        index + offset
+    } else {
+        index
+    }
+}
+
+pub(super) fn previous_codepoint(index: usize, string: &str) -> usize {
+    if let Some((new_index, _)) = string[..index].char_indices().next_back() {
+        new_index
+    } else {
+        index
+    }
+}
+
 pub(super) fn next_word(pivot: usize, string: &str) -> usize {
     let end = string.len();
     if pivot == end {
         pivot
     } else {
         unicode_segmentation::UnicodeSegmentation::split_word_bound_indices(string)
-            .find(|pair| pair.0 > pivot)
+            .find(|pair| {
+                pair.0 > pivot
+                    && if let Some(c) = pair.1.chars().next() {
+                        !c.is_whitespace()
+                    } else {
+                        true
+                    }
+            })
             .map_or(string.len(), |pair| pair.0)
     }
 }
@@ -14,7 +37,14 @@ pub(super) fn previous_word(pivot: usize, string: &str) -> usize {
         pivot
     } else {
         unicode_segmentation::UnicodeSegmentation::split_word_bound_indices(string)
-            .rfind(|pair| pair.0 < pivot)
+            .rfind(|pair| {
+                pair.0 < pivot
+                    && if let Some(c) = pair.1.chars().next() {
+                        !c.is_whitespace()
+                    } else {
+                        true
+                    }
+            })
             .map_or(0, |pair| pair.0)
     }
 }
@@ -24,7 +54,14 @@ pub(super) fn previous_word_end(pivot: usize, string: &str) -> usize {
         pivot
     } else {
         unicode_segmentation::UnicodeSegmentation::split_word_bound_indices(string)
-            .rfind(|pair| pair.0 < pivot)
+            .rfind(|pair| {
+                pair.0 + pair.1.len() < pivot
+                    && if let Some(c) = pair.1.chars().next() {
+                        !c.is_whitespace()
+                    } else {
+                        true
+                    }
+            })
             .map_or(0, |pair| pair.0 + pair.1.len())
     }
 }
@@ -61,7 +98,7 @@ mod test {
                     "AddZ   \t   ",
                     "   \t   AddZ",
                     "   \t   AddZ   \t   ",
-                    "AddZ AdZ  AZ   O AZ  AdZ   AddZ",
+                    "AddZ AdZ  AZ \t  O AZ  AdZ   AddZ",
                 ],
             }
         }
@@ -114,7 +151,7 @@ mod test {
 
         assert!(
             validator(pivot, scenario),
-            "failed on iteration {} at index {} for {}",
+            "failed on iteration {} at index {} for \"{}\"",
             iteration,
             pivot,
             scenario
@@ -144,7 +181,7 @@ mod test {
     fn previous_word_end() {
         let tester = Tester::prepare(Direction::Backward);
         tester.test(super::previous_word_end, |pivot, string| {
-            let c = string[pivot - 1..].chars().next().unwrap();
+            let c = string[..pivot].chars().next_back().unwrap();
             c == 'Z' || c == 'O'
         });
     }

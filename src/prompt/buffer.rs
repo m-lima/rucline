@@ -124,17 +124,10 @@ impl Buffer {
 
         match (range, direction) {
             (Single, Backward) => {
-                if self.cursor > 0 {
-                    if let Some((index, _)) = self.string[..self.cursor].char_indices().next_back()
-                    {
-                        self.cursor = index;
-                    }
-                }
+                self.cursor = super::navigation::previous_codepoint(self.cursor, &self.string);
             }
             (Single, Forward) => {
-                if let Some((index, _)) = self.string[self.cursor..].char_indices().nth(1) {
-                    self.cursor += index;
-                }
+                self.cursor = super::navigation::next_codepoint(self.cursor, &self.string);
             }
             (Word, Backward) => {
                 self.cursor = super::navigation::previous_word(self.cursor, &self.string);
