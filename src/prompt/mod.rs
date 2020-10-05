@@ -43,13 +43,11 @@
 //! [`prompt`]: prompt/index.html
 
 mod buffer;
-mod char_string;
 mod context;
 mod navigation;
 mod writer;
 
 use buffer::Buffer;
-use char_string::{CharString, CharStringView};
 use context::ContextImpl;
 use writer::Writer;
 
@@ -64,7 +62,7 @@ use crate::completion::{Completer, Suggester};
 /// [`erase_after_read`]: struct.Prompt.html#method.erase_after_read
 pub struct Prompt<'o, 'c, 's> {
     erase_after_read: bool,
-    text: Option<CharString>,
+    text: Option<String>,
     overrider: Option<&'o dyn Overrider>,
     completer: Option<&'c dyn Completer>,
     suggester: Option<&'s dyn Suggester>,
@@ -192,7 +190,7 @@ impl<'o, 'c, 's> Prompt<'o, 'c, 's> {
     pub fn read_line(&self) -> Result<Option<String>, crate::ErrorKind> {
         let mut context = ContextImpl::new(
             self.erase_after_read,
-            self.text.as_ref(),
+            self.text.as_ref().map(String::as_str),
             self.completer,
             self.suggester,
         )?;

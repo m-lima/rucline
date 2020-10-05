@@ -1,13 +1,8 @@
-// TODO: Consider impact of using &str instead of &[char] in public API for completions
-
 //! Provides completion methods for [`Prompt`] when reading lines.
 //!
 //! By default, no completions are performed upon user interaction. However, if a [`Completer`]
 //! or a [`Suggester`] are provided, the [`Prompt`] will query for completions for the current
 //! state of the line.
-//!
-//! Notably, the traits from this module expose a `&[char]` interface. This is addressed in more detail
-//! below.
 //!
 //! This module also includes a convenience wrapper for lambdas, allowing quick implementation
 //! of completions with closures.
@@ -21,7 +16,7 @@
 //!
 //! struct Basic(Vec<Vec<char>>);
 //! impl Completer for Basic {
-//!   fn complete_for(&self, context: &dyn Context) -> Option<&[char]> {
+//!   fn complete_for(&self, context: &dyn Context) -> Option<&str> {
 //!       let buffer = context.buffer();
 //!       if buffer.is_empty() {
 //!           None
@@ -42,7 +37,7 @@
 //!
 //! struct Basic(Vec<Vec<char>>);
 //! impl Suggester for Basic {
-//!   fn suggest_for(&self, context: &dyn Context) -> Vec<&[char]> {
+//!   fn suggest_for(&self, context: &dyn Context) -> Vec<&str> {
 //!       self.0.iter().map(Vec::as_slice).collect::<Vec<_>>()
 //!   }
 //! }
@@ -65,28 +60,6 @@
 //!        .collect::<Vec<_>>()
 //!});
 //! ```
-//!
-//! # Usage of `&[char]`
-//!
-//! Strings in Rust support UTF-8, that means that a single character that is rendered in the
-//! terminal might be from a single byte to four. To support cursor positioning and editing
-//! of the buffer, the data must be of a constant size, i.e. `char`.
-//!
-//! This is less memory efficient, however more effient in runtime - both in terms of CPU and,
-//! unintuitevily, memory.
-//!
-//! If the implementation stores and returns a `String`, this will "compact" the characters into
-//! the minimum necessary size for representing that glyph. However, once printed in the terminal,
-//! the data must be converted to `char`, as explained before. With that in mind, that would cause
-//! overhead of CPU and memory to convert and store the `String` to a array of `char`.
-//! Furthermore, it would not be possible to have a single memory allocation and pass around
-//! references, since allocation is needed to convert `String` -> `[char]`.
-//!
-//! By storing a `Vec<char>`, the trait implementation is able to return references to data that
-//! will not reallocate and will not need to be converted.
-//!
-//! With that said, if performance is not a concern, the trait implementaion may simply store a
-//! a `String` and return the `chars()` output.
 //!
 //! # See also
 //! * [`Basic`]
@@ -118,7 +91,7 @@ pub use crate::Context;
 ///
 /// struct Basic(Vec<Vec<char>>);
 /// impl Completer for Basic {
-///   fn complete_for(&self, context: &dyn Context) -> Option<&[char]> {
+///   fn complete_for(&self, context: &dyn Context) -> Option<&str> {
 ///       let buffer = context.buffer();
 ///       if buffer.is_empty() {
 ///           None
@@ -151,7 +124,7 @@ pub trait Completer {
     /// * [`context`] - The current context in which this event is coming in.
     ///
     /// # Return
-    /// * [`Option<&[char]>`] - A completion to be rendered. `None` if there are no suggestions.
+    /// * [`Option<&str>`] - A completion to be rendered. `None` if there are no suggestions.
     ///
     /// # See also
     /// * [`Basic`]
@@ -159,7 +132,7 @@ pub trait Completer {
     /// [`Context`]: ../prompt/context/trait.Context.html
     /// [`Completer`]: trait.Completer.html
     /// [`Basic`]: struct.Basic.html#implementations
-    fn complete_for(&self, context: &dyn Context) -> Option<&[char]>;
+    fn complete_for(&self, context: &dyn Context) -> Option<&str>;
 }
 
 /// Generates a list of possible values for the [`Prompt`] buffer, usually associated with the
@@ -192,7 +165,7 @@ pub trait Suggester {
     /// ```no_run
     /// # struct Basic(Vec<Vec<char>>);
     /// # impl rucline::completion::Suggester for Basic {
-    ///  fn suggest_for(&self, _: &dyn rucline::Context) -> Vec<&[char]> {
+    ///  fn suggest_for(&self, _: &dyn rucline::Context) -> Vec<&str> {
     ///     self.0.iter().map(Vec::as_slice).collect::<Vec<_>>()
     /// }
     /// # }
@@ -202,7 +175,7 @@ pub trait Suggester {
     /// * [`context`] - The current context in which this event is coming in.
     ///
     /// # Return
-    /// * [`Vec<&[char]>`] - The suggestions to be rendered as drop-down options. Empty if none.
+    /// * [`Vec<&str>`] - The suggestions to be rendered as drop-down options. Empty if none.
     ///
     /// # See also
     /// * [`Basic`]
@@ -210,14 +183,14 @@ pub trait Suggester {
     /// [`Basic`]: struct.Basic.html#implementations
     /// [`Completer`]: trait.Completer.html
     /// [`Context`]: ../prompt/context/trait.Context.html
-    fn suggest_for(&self, context: &dyn Context) -> Vec<&[char]>;
+    fn suggest_for(&self, context: &dyn Context) -> Vec<&str>;
 }
 
 /// A wrapper that converts a lambda into a [`Completer`] or a [`Suggester`].
 ///
 /// The valid signatures for the lambdas are:
-/// * [`Completer`] - `Fn(&dyn Context) -> Option<&[char]>`
-/// * [`Suggester`] - `Fn(&dyn Context) -> Vec<&[char]>`
+/// * [`Completer`] - `Fn(&dyn Context) -> Option<&str>`
+/// * [`Suggester`] - `Fn(&dyn Context) -> Vec<&str>`
 ///
 /// **Note:**
 /// When declaring the lambda, it is necessary to let Rust know of the lifetime of the [`Context`].
@@ -245,9 +218,9 @@ where
     _phantom: std::marker::PhantomData<&'a ()>,
 }
 
-impl<'a, F> std::convert::From<F> for Lambda<'a, F, Option<&'a [char]>>
+impl<'a, F> std::convert::From<F> for Lambda<'a, F, Option<&'a str>>
 where
-    F: Fn(&dyn Context) -> Option<&'a [char]>,
+    F: Fn(&dyn Context) -> Option<&'a str>,
 {
     fn from(lambda: F) -> Self {
         Self {
@@ -257,9 +230,9 @@ where
     }
 }
 
-impl<'a, F> std::convert::From<F> for Lambda<'a, F, Vec<&'a [char]>>
+impl<'a, F> std::convert::From<F> for Lambda<'a, F, Vec<&'a str>>
 where
-    F: Fn(&dyn Context) -> Vec<&'a [char]>,
+    F: Fn(&dyn Context) -> Vec<&'a str>,
 {
     fn from(lambda: F) -> Self {
         Self {
@@ -269,20 +242,20 @@ where
     }
 }
 
-impl<'a, F> Completer for Lambda<'a, F, Option<&'a [char]>>
+impl<'a, F> Completer for Lambda<'a, F, Option<&'a str>>
 where
-    F: Fn(&dyn Context) -> Option<&'a [char]>,
+    F: Fn(&dyn Context) -> Option<&'a str>,
 {
-    fn complete_for(&self, context: &dyn Context) -> Option<&[char]> {
+    fn complete_for(&self, context: &dyn Context) -> Option<&str> {
         (self.lambda)(context)
     }
 }
 
-impl<'a, F> Suggester for Lambda<'a, F, Vec<&'a [char]>>
+impl<'a, F> Suggester for Lambda<'a, F, Vec<&'a str>>
 where
-    F: Fn(&dyn Context) -> Vec<&'a [char]>,
+    F: Fn(&dyn Context) -> Vec<&'a str>,
 {
-    fn suggest_for(&self, context: &dyn Context) -> Vec<&[char]> {
+    fn suggest_for(&self, context: &dyn Context) -> Vec<&str> {
         (self.lambda)(context)
     }
 }
@@ -298,7 +271,7 @@ where
 /// [`Completer`]: trait.Completer.html
 /// [`Context`]: ../prompt/context/trait.Context.html
 /// [`Suggester`]: trait.Suggester.html
-pub struct Basic(Vec<Vec<char>>);
+pub struct Basic(Vec<String>);
 
 impl Basic {
     /// Creates a new instance from the list of `options` given.
@@ -316,19 +289,14 @@ impl Basic {
     /// * `options` - A list of `&str` to serve as options for completion and suggestions.
     #[must_use]
     pub fn new(options: &[&str]) -> Self {
-        Self(
-            options
-                .iter()
-                .map(|string| string.chars().collect())
-                .collect(),
-        )
+        Self(options.iter().map(|s| String::from(*s)).collect())
     }
 }
 
 impl Completer for Basic {
     // Allowed because it is more readable this way
     #[allow(clippy::find_map)]
-    fn complete_for(&self, context: &dyn Context) -> Option<&[char]> {
+    fn complete_for(&self, context: &dyn Context) -> Option<&str> {
         let buffer = context.buffer();
         if buffer.is_empty() {
             None
@@ -342,8 +310,8 @@ impl Completer for Basic {
 }
 
 impl Suggester for Basic {
-    fn suggest_for(&self, _: &dyn Context) -> Vec<&[char]> {
-        self.0.iter().map(Vec::as_slice).collect::<Vec<_>>()
+    fn suggest_for(&self, _: &dyn Context) -> Vec<&str> {
+        self.0.iter().map(String::as_str).collect::<Vec<_>>()
     }
 }
 
@@ -368,22 +336,22 @@ mod test {
         #[test]
         fn complete_the_first_match() {
             let basic = Basic::new(&["zz", "b3", "b2"]);
-            let expected = ['3'];
-            assert_eq!(basic.complete_for(&Mock::from("b")), Some(&expected[..]));
+            let expected = "3";
+            assert_eq!(basic.complete_for(&Mock::from("b")), Some(expected));
         }
 
         #[test]
         fn only_complete_the_remainder() {
             let basic = Basic::new(&["abcd", "abc"]);
-            let expected = ['d'];
-            assert_eq!(basic.complete_for(&Mock::from("abc")), Some(&expected[..]));
+            let expected = "d";
+            assert_eq!(basic.complete_for(&Mock::from("abc")), Some(expected));
         }
 
         #[test]
         fn always_suggest() {
             let basic = Basic::new(&["a", "b", "c"]);
-            let options = [['a'], ['b'], ['c']];
-            let expected = vec![&options[0][..], &options[1][..], &options[2][..]];
+            let options = "abc";
+            let expected = vec!["a", "b", "c"];
             assert_eq!(&basic.suggest_for(&Mock::empty()), &expected);
             assert_eq!(&basic.suggest_for(&Mock::from("a")), &expected);
             assert_eq!(&basic.suggest_for(&Mock::from("z")), &expected);
@@ -407,19 +375,19 @@ mod test {
         fn basic_lambda_completer() {
             let basic = Basic::new(&["zz", "b3", "b2"]);
             let lambda = Lambda::from(|c: &dyn Context| basic.complete_for(c));
-            let expected = ['3'];
-            assert_eq!(lambda.complete_for(&Mock::from("b")), Some(&expected[..]));
+            let expected = "3";
+            assert_eq!(lambda.complete_for(&Mock::from("b")), Some(expected));
         }
 
         #[test]
         fn basic_lambda_suggester() {
             let basic = Basic::new(&["a", "b", "c"]);
             let lambda = Lambda::from(|c: &dyn Context| basic.suggest_for(c));
-            let options = [['a'], ['b'], ['c']];
-            let expected = vec![&options[0][..], &options[1][..], &options[2][..]];
-            assert_eq!(&lambda.suggest_for(&Mock::empty()), &expected);
-            assert_eq!(&lambda.suggest_for(&Mock::from("a")), &expected);
-            assert_eq!(&lambda.suggest_for(&Mock::from("z")), &expected);
+            let options = "abc";
+            let expected = vec!["a", "b", "c"];
+            assert_eq!(&basic.suggest_for(&Mock::empty()), &expected);
+            assert_eq!(&basic.suggest_for(&Mock::from("a")), &expected);
+            assert_eq!(&basic.suggest_for(&Mock::from("z")), &expected);
         }
     }
 }

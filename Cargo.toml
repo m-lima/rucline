@@ -17,6 +17,8 @@ serialize = [ "serde", "crossterm/serde" ]
 [dependencies]
 crossterm = "0.17"
 serde = { version = "1", features = [ "derive" ], optional = true }
+unicode-segmentation = "1"
+unicode-width = "0.1"
 
 [dev-dependencies]
 colored = "1.9"

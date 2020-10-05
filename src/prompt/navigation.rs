@@ -1,77 +1,39 @@
-// TODO: Add more characters to word separation
-
-pub(super) fn next_word(pivot: usize, string: &[char]) -> usize {
+pub(super) fn next_word(pivot: usize, string: &str) -> usize {
     let end = string.len();
     if pivot == end {
         pivot
     } else {
-        let mut index = pivot;
-
-        // Go through the characters of the word
-        while index < end && !string[index].is_whitespace() {
-            index += 1;
-        }
-
-        // Go through the trailing whitespace, if any
-        while index < end && string[index].is_whitespace() {
-            index += 1;
-        }
-
-        index
+        unicode_segmentation::UnicodeSegmentation::split_word_bound_indices(string)
+            .find(|pair| pair.0 > pivot)
+            .map(|pair| pair.0)
+            .unwrap_or(string.len())
     }
 }
 
-pub(super) fn previous_word(pivot: usize, string: &[char]) -> usize {
+pub(super) fn previous_word(pivot: usize, string: &str) -> usize {
     if pivot == 0 {
         pivot
     } else {
-        let mut index = pivot - 1;
-
-        // Go through the trailing whitespace, if any
-        while index > 0 && string[index].is_whitespace() {
-            index -= 1;
-        }
-
-        // Go through the characters of the word
-        while index > 0 && !string[index - 1].is_whitespace() {
-            index -= 1;
-        }
-
-        index
+        unicode_segmentation::UnicodeSegmentation::split_word_bound_indices(string)
+            .rfind(|pair| pair.0 < pivot)
+            .map(|pair| pair.0)
+            .unwrap_or(0)
     }
 }
 
-pub(super) fn previous_word_end(pivot: usize, string: &[char]) -> usize {
+pub(super) fn previous_word_end(pivot: usize, string: &str) -> usize {
     if pivot == 0 {
         pivot
     } else {
-        let mut index = pivot - 1;
-
-        // At the end of the string, go through all trailing whitespace
-        if pivot == string.len() {
-            while index > 0 && string[index].is_whitespace() {
-                index -= 1;
-            }
-        }
-
-        // Go through the leading characters of the current word
-        while index > 0 && !string[index].is_whitespace() {
-            index -= 1;
-        }
-
-        // Go through the leading spaces of the current word
-        while index > 0 && string[index - 1].is_whitespace() {
-            index -= 1;
-        }
-
-        index
+        unicode_segmentation::UnicodeSegmentation::split_word_bound_indices(string)
+            .rfind(|pair| pair.0 < pivot)
+            .map(|pair| pair.0 + pair.1.len())
+            .unwrap_or(0)
     }
 }
 
 #[cfg(test)]
 mod test {
-    use super::super::CharString;
-
     #[derive(Copy, Clone)]
     enum Direction {
         Forward,
@@ -79,7 +41,7 @@ mod test {
     }
 
     impl Direction {
-        pub(super) fn start_for(self, scenario: &CharString) -> usize {
+        pub(super) fn start_for(self, scenario: &str) -> usize {
             match self {
                 Direction::Forward => 0,
                 Direction::Backward => scenario.len(),
@@ -89,7 +51,7 @@ mod test {
 
     struct Tester {
         direction: Direction,
-        scenarios: [CharString; 6],
+        scenarios: [&'static str; 6],
     }
 
     impl Tester {
@@ -97,20 +59,20 @@ mod test {
             Self {
                 direction,
                 scenarios: [
-                    CharString::new(),
-                    CharString::from("   \t   "),
-                    CharString::from("AddZ   \t   "),
-                    CharString::from("   \t   AddZ"),
-                    CharString::from("   \t   AddZ   \t   "),
-                    CharString::from("AddZ AdZ  AZ   O AZ  AdZ   AddZ"),
+                    "",
+                    "   \t   ",
+                    "AddZ   \t   ",
+                    "   \t   AddZ",
+                    "   \t   AddZ   \t   ",
+                    "AddZ AdZ  AZ   O AZ  AdZ   AddZ",
                 ],
             }
         }
 
         pub(super) fn test<F, V>(&self, uut: F, validator: V)
         where
-            F: Fn(usize, &[char]) -> usize,
-            V: Fn(usize, &[char]) -> bool,
+            F: Fn(usize, &str) -> usize,
+            V: Fn(usize, &str) -> bool,
         {
             for scenario in &self.scenarios {
                 test_scenario(
@@ -129,12 +91,12 @@ mod test {
         uut: F,
         validator: V,
         direction: Direction,
-        scenario: &CharString,
+        scenario: &str,
         start: usize,
         iteration: usize,
     ) where
-        F: Fn(usize, &[char]) -> usize,
-        V: Fn(usize, &[char]) -> bool,
+        F: Fn(usize, &str) -> usize,
+        V: Fn(usize, &str) -> bool,
     {
         let pivot = uut(start, scenario);
 

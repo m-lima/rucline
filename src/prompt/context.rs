@@ -1,21 +1,18 @@
-use super::{
-    navigation, Buffer, CharString, CharStringView, Completer, Direction, Range, Scope, Suggester,
-    Writer,
-};
+use super::{navigation, Buffer, Completer, Direction, Range, Scope, Suggester, Writer};
 use crate::Context;
 
 pub(super) struct ContextImpl<'c, 's> {
     writer: Writer,
     buffer: Buffer,
     completer: Option<&'c dyn Completer>,
-    completion: Option<CharStringView<'c>>,
+    completion: Option<&'c str>,
     suggester: Option<&'s dyn Suggester>,
     suggestions: Option<Suggestions<'s>>,
 }
 
 impl Context for ContextImpl<'_, '_> {
     #[inline]
-    fn buffer(&self) -> &[char] {
+    fn buffer(&self) -> &str {
         &self.buffer
     }
 
@@ -28,7 +25,7 @@ impl Context for ContextImpl<'_, '_> {
 impl<'c, 's> ContextImpl<'c, 's> {
     pub(super) fn new(
         erase_on_drop: bool,
-        prompt: Option<&CharString>,
+        prompt: Option<&str>,
         completer: Option<&'c dyn Completer>,
         suggester: Option<&'s dyn Suggester>,
     ) -> Result<Self, crate::ErrorKind> {
@@ -78,22 +75,26 @@ impl<'c, 's> ContextImpl<'c, 's> {
     pub(super) fn complete(&mut self, range: Range) -> Result<(), crate::ErrorKind> {
         self.buffer.go_to_end();
         if let Some(completion) = &self.completion {
-            match range {
-                Range::Line => {
-                    self.buffer.write_str(completion);
-                    self.update_completion();
-                    self.writer.print(&self.buffer, self.completion)
-                }
-                Range::Word => {
-                    let index = navigation::next_word(0, &completion);
-                    self.buffer.write_str(&completion[0..index]);
-                    self.update_completion();
-                    self.writer.print(&self.buffer, self.completion)
-                }
-                Range::Single => {
-                    self.buffer.write(completion[0]);
-                    self.update_completion();
-                    self.writer.print(&self.buffer, self.completion)
+            if completion.is_empty() {
+                Ok(())
+            } else {
+                match range {
+                    Range::Line => {
+                        self.buffer.write_str(completion);
+                        self.update_completion();
+                        self.writer.print(&self.buffer, self.completion)
+                    }
+                    Range::Word => {
+                        let index = navigation::next_word(0, &completion);
+                        self.buffer.write_str(&completion[0..index]);
+                        self.update_completion();
+                        self.writer.print(&self.buffer, self.completion)
+                    }
+                    Range::Single => {
+                        self.buffer.write(completion.chars().next().unwrap());
+                        self.update_completion();
+                        self.writer.print(&self.buffer, self.completion)
+                    }
                 }
             }
         } else {
@@ -150,11 +151,11 @@ impl<'c, 's> ContextImpl<'c, 's> {
 
 struct Suggestions<'a> {
     index: Option<usize>,
-    options: Vec<CharStringView<'a>>,
+    options: Vec<&'a str>,
 }
 
 impl<'a> Suggestions<'a> {
-    fn new(options: Vec<CharStringView<'a>>, direction: Direction) -> Self {
+    fn new(options: Vec<&'a str>, direction: Direction) -> Self {
         let index = match direction {
             Direction::Forward => 0,
             Direction::Backward => options.len() - 1,
@@ -185,7 +186,7 @@ impl<'a> Suggestions<'a> {
 
     fn take(mut self) -> Option<Buffer> {
         if let Some(index) = self.index {
-            Some(Buffer::from(self.options.swap_remove(index).as_slice()))
+            Some(Buffer::from(self.options.swap_remove(index)))
         } else {
             None
         }
