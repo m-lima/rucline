@@ -5,8 +5,7 @@ pub(super) fn next_word(pivot: usize, string: &str) -> usize {
     } else {
         unicode_segmentation::UnicodeSegmentation::split_word_bound_indices(string)
             .find(|pair| pair.0 > pivot)
-            .map(|pair| pair.0)
-            .unwrap_or(string.len())
+            .map_or(string.len(), |pair| pair.0)
     }
 }
 
@@ -16,8 +15,7 @@ pub(super) fn previous_word(pivot: usize, string: &str) -> usize {
     } else {
         unicode_segmentation::UnicodeSegmentation::split_word_bound_indices(string)
             .rfind(|pair| pair.0 < pivot)
-            .map(|pair| pair.0)
-            .unwrap_or(0)
+            .map_or(0, |pair| pair.0)
     }
 }
 
@@ -27,8 +25,7 @@ pub(super) fn previous_word_end(pivot: usize, string: &str) -> usize {
     } else {
         unicode_segmentation::UnicodeSegmentation::split_word_bound_indices(string)
             .rfind(|pair| pair.0 < pivot)
-            .map(|pair| pair.0 + pair.1.len())
-            .unwrap_or(0)
+            .map_or(0, |pair| pair.0 + pair.1.len())
     }
 }
 
@@ -129,7 +126,8 @@ mod test {
     fn next_word() {
         let tester = Tester::prepare(Direction::Forward);
         tester.test(super::next_word, |pivot, string| {
-            string[pivot] == 'A' || string[pivot] == 'O'
+            let c = string[pivot..].chars().next().unwrap();
+            c == 'A' || c == 'O'
         });
     }
 
@@ -137,7 +135,8 @@ mod test {
     fn previous_word() {
         let tester = Tester::prepare(Direction::Backward);
         tester.test(super::previous_word, |pivot, string| {
-            string[pivot] == 'A' || string[pivot] == 'O'
+            let c = string[pivot..].chars().next().unwrap();
+            c == 'A' || c == 'O'
         });
     }
 
@@ -145,7 +144,8 @@ mod test {
     fn previous_word_end() {
         let tester = Tester::prepare(Direction::Backward);
         tester.test(super::previous_word_end, |pivot, string| {
-            string[pivot - 1] == 'Z' || string[pivot - 1] == 'O'
+            let c = string[pivot - 1..].chars().next().unwrap();
+            c == 'Z' || c == 'O'
         });
     }
 }

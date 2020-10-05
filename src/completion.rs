@@ -350,7 +350,6 @@ mod test {
         #[test]
         fn always_suggest() {
             let basic = Basic::new(&["a", "b", "c"]);
-            let options = "abc";
             let expected = vec!["a", "b", "c"];
             assert_eq!(&basic.suggest_for(&Mock::empty()), &expected);
             assert_eq!(&basic.suggest_for(&Mock::from("a")), &expected);
@@ -383,11 +382,10 @@ mod test {
         fn basic_lambda_suggester() {
             let basic = Basic::new(&["a", "b", "c"]);
             let lambda = Lambda::from(|c: &dyn Context| basic.suggest_for(c));
-            let options = "abc";
             let expected = vec!["a", "b", "c"];
-            assert_eq!(&basic.suggest_for(&Mock::empty()), &expected);
-            assert_eq!(&basic.suggest_for(&Mock::from("a")), &expected);
-            assert_eq!(&basic.suggest_for(&Mock::from("z")), &expected);
+            assert_eq!(&lambda.suggest_for(&Mock::empty()), &expected);
+            assert_eq!(&lambda.suggest_for(&Mock::from("a")), &expected);
+            assert_eq!(&lambda.suggest_for(&Mock::from("z")), &expected);
         }
     }
 }

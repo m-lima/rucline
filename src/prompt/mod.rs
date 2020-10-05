@@ -84,7 +84,7 @@ impl<'o, 'c, 's> Prompt<'o, 'c, 's> {
     // Allowed because `impl ToString` doesn't necessarily need to consume `string`
     #[allow(clippy::needless_pass_by_value)]
     pub fn text(mut self, string: impl ToString) -> Self {
-        self.text = Some(string.to_string().into());
+        self.text = Some(string.to_string());
         self
     }
 
@@ -190,7 +190,7 @@ impl<'o, 'c, 's> Prompt<'o, 'c, 's> {
     pub fn read_line(&self) -> Result<Option<String>, crate::ErrorKind> {
         let mut context = ContextImpl::new(
             self.erase_after_read,
-            self.text.as_ref().map(String::as_str),
+            self.text.as_deref(),
             self.completer,
             self.suggester,
         )?;
@@ -235,7 +235,7 @@ impl<S: ToString> std::convert::From<S> for Prompt<'_, '_, '_> {
     fn from(string: S) -> Self {
         Self {
             erase_after_read: false,
-            text: Some(string.to_string().into()),
+            text: Some(string.to_string()),
             overrider: None,
             completer: None,
             suggester: None,
