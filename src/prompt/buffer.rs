@@ -552,6 +552,7 @@ mod test {
         );
     }
 
+    #[derive(Clone, Copy)]
     struct Jig {
         empty: &'static str,
         at_start: &'static str,
@@ -578,11 +579,17 @@ mod test {
         string.replace('_', "")
     }
 
-    fn scenarios(action: impl Fn(&mut Buffer) -> (), jig: Jig) {
+    fn scenarios(action: impl Fn(&mut Buffer) + Copy, jig: Jig) {
+        simple_positional_scenarios(action, jig);
+        single_unicode_scalar_value_scenarios(action, jig);
+        multiple_unicode_scalar_values_scenarios(action, jig);
+    }
+
+    fn simple_positional_scenarios(action: impl Fn(&mut Buffer), jig: Jig) {
         // Empty
         let mut buffer = Buffer::from("");
         action(&mut buffer);
-        let cursor = jig.empty.find('_').expect("empty");
+        let mut cursor = jig.empty.find('_').expect("empty");
         assert_eq!(buffer.cursor, cursor, "empty");
         assert_eq!(buffer.string, clean(jig.empty), "empty");
 
@@ -590,7 +597,7 @@ mod test {
         let mut buffer = Buffer::from(TEST_STRING);
         buffer.cursor = 0;
         action(&mut buffer);
-        let cursor = jig.at_start.find('_').expect("at_start");
+        cursor = jig.at_start.find('_').expect("at_start");
         assert_eq!(buffer.cursor, cursor, "at_start");
         assert_eq!(buffer.string, clean(jig.at_start), "at_start");
 
@@ -598,7 +605,7 @@ mod test {
         let mut buffer = Buffer::from(TEST_STRING);
         buffer.cursor = TEST_STRING.find('e').unwrap();
         action(&mut buffer);
-        let cursor = jig.at_single_char.find('_').expect("at_single_char");
+        cursor = jig.at_single_char.find('_').expect("at_single_char");
         assert_eq!(buffer.cursor, cursor, "at_single_char");
         assert_eq!(buffer.string, clean(jig.at_single_char), "at_single_char");
 
@@ -606,14 +613,14 @@ mod test {
         let mut buffer = Buffer::from(TEST_STRING);
         buffer.cursor = TEST_STRING.find('h').unwrap();
         action(&mut buffer);
-        let cursor = jig.in_middle.find('_').expect("in_middle");
+        cursor = jig.in_middle.find('_').expect("in_middle");
         assert_eq!(buffer.cursor, cursor, "in_middle");
         assert_eq!(buffer.string, clean(jig.in_middle), "in_middle");
 
         // End
         let mut buffer = Buffer::from(TEST_STRING);
         action(&mut buffer);
-        let cursor = jig.at_end.find('_').expect("at_end");
+        cursor = jig.at_end.find('_').expect("at_end");
         assert_eq!(buffer.cursor, cursor, "at_end");
         assert_eq!(buffer.string, clean(jig.at_end), "at_end");
 
@@ -621,7 +628,7 @@ mod test {
         let mut buffer = Buffer::from(TEST_STRING);
         buffer.cursor = TEST_STRING.find('\t').unwrap();
         action(&mut buffer);
-        let cursor = jig.in_space.find('_').expect("in_space");
+        cursor = jig.in_space.find('_').expect("in_space");
         assert_eq!(buffer.cursor, cursor, "in_space");
         assert_eq!(buffer.string, clean(jig.in_space), "in_space");
 
@@ -629,7 +636,7 @@ mod test {
         let mut buffer = Buffer::from(TEST_STRING);
         buffer.cursor = TEST_STRING.find('f').unwrap();
         action(&mut buffer);
-        let cursor = jig.at_word_start.find('_').expect("at_word_start");
+        cursor = jig.at_word_start.find('_').expect("at_word_start");
         assert_eq!(buffer.cursor, cursor, "at_word_start");
         assert_eq!(buffer.string, clean(jig.at_word_start), "at_word_start");
 
@@ -637,15 +644,17 @@ mod test {
         let mut buffer = Buffer::from(TEST_STRING);
         buffer.cursor = TEST_STRING.find('i').unwrap();
         action(&mut buffer);
-        let cursor = jig.at_word_end.find('_').expect("at_word_end");
+        cursor = jig.at_word_end.find('_').expect("at_word_end");
         assert_eq!(buffer.cursor, cursor, "at_word_end");
         assert_eq!(buffer.string, clean(jig.at_word_end), "at_word_end");
+    }
 
+    fn single_unicode_scalar_value_scenarios(action: impl Fn(&mut Buffer), jig: Jig) {
         // Before emoji
         let mut buffer = Buffer::from(TEST_STRING);
         buffer.cursor = TEST_STRING.find('😀').unwrap() - 1;
         action(&mut buffer);
-        let cursor = jig.before_emoji.find('_').expect("before_emoji");
+        let mut cursor = jig.before_emoji.find('_').expect("before_emoji");
         assert_eq!(buffer.cursor, cursor, "before_emoji");
         assert_eq!(buffer.string, clean(jig.before_emoji), "before_emoji");
 
@@ -653,7 +662,7 @@ mod test {
         let mut buffer = Buffer::from(TEST_STRING);
         buffer.cursor = TEST_STRING.find('😀').unwrap();
         action(&mut buffer);
-        let cursor = jig.at_emoji.find('_').expect("at_emoji");
+        cursor = jig.at_emoji.find('_').expect("at_emoji");
         assert_eq!(buffer.cursor, cursor, "at_emoji");
         assert_eq!(buffer.string, clean(jig.at_emoji), "at_emoji");
 
@@ -661,7 +670,7 @@ mod test {
         let mut buffer = Buffer::from(TEST_STRING);
         buffer.cursor = TEST_STRING.find('😀').unwrap() + '😀'.len_utf8();
         action(&mut buffer);
-        let cursor = jig.after_emoji.find('_').expect("after_emoji");
+        cursor = jig.after_emoji.find('_').expect("after_emoji");
         assert_eq!(buffer.cursor, cursor, "after_emoji");
         assert_eq!(buffer.string, clean(jig.after_emoji), "after_emoji");
 
@@ -669,7 +678,7 @@ mod test {
         let mut buffer = Buffer::from(TEST_STRING);
         buffer.cursor = TEST_STRING.find('j').unwrap();
         action(&mut buffer);
-        let cursor = jig.until_emoji.find('_').expect("until_emoji");
+        cursor = jig.until_emoji.find('_').expect("until_emoji");
         assert_eq!(buffer.cursor, cursor, "until_emoji");
         assert_eq!(buffer.string, clean(jig.until_emoji), "until_emoji");
 
@@ -677,15 +686,17 @@ mod test {
         let mut buffer = Buffer::from(TEST_STRING);
         buffer.cursor = TEST_STRING.find('m').unwrap();
         action(&mut buffer);
-        let cursor = jig.past_emoji.find('_').expect("past_emoji");
+        cursor = jig.past_emoji.find('_').expect("past_emoji");
         assert_eq!(buffer.cursor, cursor, "past_emoji");
         assert_eq!(buffer.string, clean(jig.past_emoji), "past_emoji");
+    }
 
+    fn multiple_unicode_scalar_values_scenarios(action: impl Fn(&mut Buffer), jig: Jig) {
         // Before multiple unicode scalar values
         let mut buffer = Buffer::from(TEST_STRING);
         buffer.cursor = TEST_STRING.find("🇧🇷").unwrap() - 1;
         action(&mut buffer);
-        let cursor = jig.before_flag.find('_').expect("before_flag");
+        let mut cursor = jig.before_flag.find('_').expect("before_flag");
         assert_eq!(buffer.cursor, cursor, "before_flag");
         assert_eq!(buffer.string, clean(jig.before_flag), "before_flag");
 
@@ -693,7 +704,7 @@ mod test {
         let mut buffer = Buffer::from(TEST_STRING);
         buffer.cursor = TEST_STRING.find("🇧🇷").unwrap();
         action(&mut buffer);
-        let cursor = jig.at_flag.find('_').expect("at_flag");
+        cursor = jig.at_flag.find('_').expect("at_flag");
         assert_eq!(buffer.cursor, cursor, "at_flag");
         assert_eq!(buffer.string, clean(jig.at_flag), "at_flag");
 
@@ -701,7 +712,7 @@ mod test {
         let mut buffer = Buffer::from(TEST_STRING);
         buffer.cursor = TEST_STRING.find("🇧🇷").unwrap() + 4;
         action(&mut buffer);
-        let cursor = jig.within_flag.find('_').expect("within_flag");
+        cursor = jig.within_flag.find('_').expect("within_flag");
         assert_eq!(buffer.cursor, cursor, "within_flag");
         assert_eq!(buffer.string, clean(jig.within_flag), "within_flag");
 
@@ -709,7 +720,7 @@ mod test {
         let mut buffer = Buffer::from(TEST_STRING);
         buffer.cursor = TEST_STRING.find("🇧🇷").unwrap() + "🇧🇷".len();
         action(&mut buffer);
-        let cursor = jig.after_flag.find('_').expect("after_flag");
+        cursor = jig.after_flag.find('_').expect("after_flag");
         assert_eq!(buffer.cursor, cursor, "after_flag");
         assert_eq!(buffer.string, clean(jig.after_flag), "after_flag");
 
@@ -717,7 +728,7 @@ mod test {
         let mut buffer = Buffer::from(TEST_STRING);
         buffer.cursor = TEST_STRING.find('n').unwrap();
         action(&mut buffer);
-        let cursor = jig.until_flag.find('_').expect("until_flag");
+        cursor = jig.until_flag.find('_').expect("until_flag");
         assert_eq!(buffer.cursor, cursor, "until_flag");
         assert_eq!(buffer.string, clean(jig.until_flag), "until_flag");
 
@@ -725,7 +736,7 @@ mod test {
         let mut buffer = Buffer::from(TEST_STRING);
         buffer.cursor = TEST_STRING.find('q').unwrap();
         action(&mut buffer);
-        let cursor = jig.past_flag.find('_').expect("past_flag");
+        cursor = jig.past_flag.find('_').expect("past_flag");
         assert_eq!(buffer.cursor, cursor, "past_flag");
         assert_eq!(buffer.string, clean(jig.past_flag), "past_flag");
     }
