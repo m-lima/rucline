@@ -116,6 +116,8 @@
 //! # }}
 //! ```
 //!
+//!  > Check the test cases for `Buffer` to see how the line editor is expected to behave
+//!
 //! [`Prompt`]: ../prompt/struct.Prompt.html
 //! [`KeyBindings`]: type.KeyBindings.html
 //! [`Event`]: type.Event.html
@@ -280,7 +282,6 @@ fn complete_if_at_end_else_move(context: &impl Context, range: Range) -> Action 
     }
 }
 
-// TODO: Investigate '\n' being parsed and 'ENTER'
 fn default_action(event: Event, context: &impl Context) -> Action {
     use crossterm::event::KeyCode;
     use Action::{Accept, Cancel, Delete, Move, Noop, Suggest, Write};

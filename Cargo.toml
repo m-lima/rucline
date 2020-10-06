@@ -1,6 +1,6 @@
 [package]
 name = "rucline"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Marcelo Lima <marcelowind@gmail.com>"]
 edition = "2018"
 readme = "README.md"
@@ -15,8 +15,9 @@ default = []
 serialize = [ "serde", "crossterm/serde" ]
 
 [dependencies]
-crossterm = "0.17"
+crossterm = "0.18"
 serde = { version = "1", features = [ "derive" ], optional = true }
+unicode-segmentation = "1"
 
 [dev-dependencies]
 colored = "1.9"

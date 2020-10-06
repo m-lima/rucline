@@ -1,10 +1,10 @@
 pub struct Context {
-    pub buffer: Vec<char>,
+    pub buffer: String,
     pub cursor: usize,
 }
 
 impl crate::Context for Context {
-    fn buffer(&self) -> &[char] {
+    fn buffer(&self) -> &str {
         &self.buffer
     }
 
@@ -16,14 +16,14 @@ impl crate::Context for Context {
 impl Context {
     pub fn empty() -> Self {
         Self {
-            buffer: Vec::new(),
+            buffer: String::new(),
             cursor: 0,
         }
     }
 
     pub fn from(string: &str) -> Self {
         Self {
-            buffer: string.chars().collect(),
+            buffer: String::from(string),
             cursor: string.len(),
         }
     }

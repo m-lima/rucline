@@ -1,6 +1,6 @@
-use super::{Buffer, CharString, CharStringView};
+use super::Buffer;
 
-// TODO: Keep track of lines (account for line breaks in CharString)
+// TODO: Keep track of lines
 pub(super) struct Writer {
     erase_on_drop: Option<usize>,
     printed_length: usize,
@@ -8,10 +8,7 @@ pub(super) struct Writer {
 }
 
 impl Writer {
-    pub(super) fn new(
-        erase_on_drop: bool,
-        prompt: Option<&CharString>,
-    ) -> Result<Self, crate::ErrorKind> {
+    pub(super) fn new(erase_on_drop: bool, prompt: Option<&str>) -> Result<Self, crate::ErrorKind> {
         crossterm::terminal::enable_raw_mode()?;
         if let Some(prompt) = prompt {
             use std::io::Write;
@@ -20,7 +17,9 @@ impl Writer {
         }
 
         let erase_on_drop = if erase_on_drop {
-            prompt.map(CharString::len).or(Some(0))
+            prompt
+                .map(|s| unicode_segmentation::UnicodeSegmentation::graphemes(s, true).count())
+                .or(Some(0))
         } else {
             None
         };
@@ -35,25 +34,30 @@ impl Writer {
     pub(super) fn print(
         &mut self,
         buffer: &Buffer,
-        completion: Option<CharStringView<'_>>,
+        completion: Option<&str>,
     ) -> Result<(), crate::ErrorKind> {
         use std::io::Write;
+        use unicode_segmentation::UnicodeSegmentation;
+
         let mut stdout = std::io::stdout();
 
         clear_from(&mut stdout, self.printed_length - self.cursor_offset)?;
 
-        self.cursor_offset = buffer.len() - buffer.cursor();
-        self.printed_length = buffer.len();
+        self.printed_length = buffer.graphemes(true).count();
+        self.cursor_offset =
+            self.printed_length - buffer[0..buffer.cursor()].graphemes(true).count();
 
         crossterm::queue!(&mut stdout, crossterm::style::Print(&buffer))?;
 
         if let Some(completion) = completion {
             use crossterm::style::Colorize;
+
+            let completion_len = completion.graphemes(true).count();
             crossterm::queue!(
                 &mut stdout,
                 crossterm::style::PrintStyledContent(crossterm::style::style(completion).blue())
             )?;
-            rewind_cursor(&mut stdout, completion.len())?;
+            rewind_cursor(&mut stdout, completion_len)?;
         }
 
         rewind_cursor(&mut stdout, self.cursor_offset)?;
@@ -63,9 +67,11 @@ impl Writer {
     pub(super) fn print_suggestions(
         &mut self,
         selected_index: usize,
-        suggestions: &[CharStringView<'_>],
+        suggestions: &[&str],
     ) -> Result<(), crate::ErrorKind> {
         use std::io::Write;
+        use unicode_segmentation::UnicodeSegmentation;
+
         let mut stdout = std::io::stdout();
 
         // Print buffer
@@ -73,7 +79,7 @@ impl Writer {
         clear_from(&mut stdout, self.printed_length - self.cursor_offset)?;
         crossterm::queue!(stdout, crossterm::style::Print(buffer))?;
         self.cursor_offset = 0;
-        self.printed_length = buffer.len();
+        self.printed_length = buffer.graphemes(true).count();
 
         // Save position at the end of the buffer
         // TODO: avoid this save and the later restore
@@ -103,7 +109,7 @@ impl Writer {
 
         // Rewind suggestions cursor
         for suggestion in suggestions.iter().rev() {
-            let length = suggestion.len();
+            let length = suggestion.graphemes(true).count();
             rewind_cursor(&mut stdout, length)?;
             crossterm::queue!(stdout, crossterm::cursor::MoveUp(1))?;
         }

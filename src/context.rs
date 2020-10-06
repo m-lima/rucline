@@ -10,7 +10,8 @@ pub trait Context {
     /// The current buffer of the prompt.
     ///
     /// That is, what has been written so far. It does not suggestions or completions.
-    fn buffer(&self) -> &[char];
+    fn buffer(&self) -> &str;
+
     /// The current cursor position of the prompt. The position is relative to the context
     /// [`buffer`].
     ///

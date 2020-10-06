@@ -3,12 +3,12 @@
 //! ### Basic usage:
 //!
 //! ```no_run
-//! use rucline::completion;
+//! use rucline::completion::Basic;
 //! use rucline::Prompt;
 //!
 //! if let Ok(Some(string)) = Prompt::from("What's you favorite website? ")
 //!     // Add some tab completions (Optional)
-//!     .suggester(&completion::Basic::new(&[
+//!     .suggester(&Basic::new(&[
 //!         "https://www.rust-lang.org/",
 //!         "https://docs.rs/",
 //!         "https://crates.io/",
@@ -43,13 +43,11 @@
 //! [`prompt`]: prompt/index.html
 
 mod buffer;
-mod char_string;
 mod context;
 mod navigation;
 mod writer;
 
 use buffer::Buffer;
-use char_string::{CharString, CharStringView};
 use context::ContextImpl;
 use writer::Writer;
 
@@ -64,7 +62,7 @@ use crate::completion::{Completer, Suggester};
 /// [`erase_after_read`]: struct.Prompt.html#method.erase_after_read
 pub struct Prompt<'o, 'c, 's> {
     erase_after_read: bool,
-    text: Option<CharString>,
+    text: Option<String>,
     overrider: Option<&'o dyn Overrider>,
     completer: Option<&'c dyn Completer>,
     suggester: Option<&'s dyn Suggester>,
@@ -86,7 +84,7 @@ impl<'o, 'c, 's> Prompt<'o, 'c, 's> {
     // Allowed because `impl ToString` doesn't necessarily need to consume `string`
     #[allow(clippy::needless_pass_by_value)]
     pub fn text(mut self, string: impl ToString) -> Self {
-        self.text = Some(string.to_string().into());
+        self.text = Some(string.to_string());
         self
     }
 
@@ -192,7 +190,7 @@ impl<'o, 'c, 's> Prompt<'o, 'c, 's> {
     pub fn read_line(&self) -> Result<Option<String>, crate::ErrorKind> {
         let mut context = ContextImpl::new(
             self.erase_after_read,
-            self.text.as_ref(),
+            self.text.as_deref(),
             self.completer,
             self.suggester,
         )?;
@@ -237,7 +235,7 @@ impl<S: ToString> std::convert::From<S> for Prompt<'_, '_, '_> {
     fn from(string: S) -> Self {
         Self {
             erase_after_read: false,
-            text: Some(string.to_string().into()),
+            text: Some(string.to_string()),
             overrider: None,
             completer: None,
             suggester: None,
