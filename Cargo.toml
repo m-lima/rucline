@@ -1,6 +1,6 @@
 [package]
 name = "rucline"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["Marcelo Lima <marcelowind@gmail.com>"]
 edition = "2018"
 readme = "README.md"
@@ -13,9 +13,11 @@ license = "MIT"
 [features]
 default = []
 serialize = [ "serde", "crossterm/serde" ]
+async = [ "crossterm/event-stream", "futures" ]
 
 [dependencies]
 crossterm = "0.18"
+futures = { version = "0.3", optional = true, default-features = false }
 serde = { version = "1", features = [ "derive" ], optional = true }
 unicode-segmentation = "1"
 
@@ -23,9 +25,14 @@ unicode-segmentation = "1"
 colored = "1.9"
 pwner = "0.1"
 quit = "1"
+tokio = { version = "0.2", features = [ "macros" ] }
+
+[[example]]
+name = "simple_async"
+required-features = [ "async" ]
 
 [package.metadata.docs.rs]
 all-features = true
 
 [package.metadata.playground]
-features = [ "serialize" ]
+features = [ "serialize", "async" ]

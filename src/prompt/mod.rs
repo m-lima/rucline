@@ -170,7 +170,6 @@ impl<'o, 'c, 's> Prompt<'o, 'c, 's> {
         self
     }
 
-    // TODO: Support crossterm async
     /// Blocks until an input is committed by the user.
     ///
     ///
@@ -213,6 +212,60 @@ impl<'o, 'c, 's> Prompt<'o, 'c, 's> {
                         }
                     }
                     Action::Accept => return Ok(Some(context.buffer_as_string())),
+                }
+            }
+        }
+    }
+
+    /// Asynchronously read the user input.
+    ///
+    ///
+    /// Analogous to `tokio::io::stdin().read_line()` or `async_std::io::stdin().read_line()`,
+    /// however providing all the customization configured in the [`Prompt`].
+    ///
+    /// # Return
+    ///
+    /// * `Option<String>` - A string containing the user input, or `None` if the user has
+    /// cancelled the input.
+    ///
+    /// # Errors
+    /// * [`ErrorKind`] - If an error occurred while reading the user input.
+    ///
+    /// [`Prompt`]: struct.Prompt.html
+    /// [`ErrorKind`]: ../enum.ErrorKind.html
+    #[cfg(feature = "async")]
+    pub async fn read_line_async(&self) -> Result<Option<String>, crate::ErrorKind> {
+        use futures::StreamExt;
+
+        let mut context = ContextImpl::new(
+            self.erase_after_read,
+            self.text.as_deref(),
+            self.completer,
+            self.suggester,
+        )?;
+
+        let mut event_reader = crossterm::event::EventStream::new();
+
+        context.print()?;
+        loop {
+            if let Some(event) = event_reader.next().await {
+                if let crossterm::event::Event::Key(e) = event? {
+                    match action_for(self.overrider, e, &context) {
+                        Action::Write(c) => context.write(c)?,
+                        Action::Delete(scope) => context.delete(scope)?,
+                        Action::Move(range, direction) => context.move_cursor(range, direction)?,
+                        Action::Complete(range) => context.complete(range)?,
+                        Action::Suggest(direction) => context.suggest(direction)?,
+                        Action::Noop => continue,
+                        Action::Cancel => {
+                            if context.is_suggesting() {
+                                context.cancel_suggestion()?;
+                            } else {
+                                return Ok(None);
+                            }
+                        }
+                        Action::Accept => return Ok(Some(context.buffer_as_string())),
+                    }
                 }
             }
         }
