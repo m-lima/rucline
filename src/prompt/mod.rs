@@ -3,12 +3,12 @@
 //! ### Basic usage:
 //!
 //! ```no_run
-//! use rucline::completion;
+//! use rucline::completion::Basic;
 //! use rucline::Prompt;
 //!
 //! if let Ok(Some(string)) = Prompt::from("What's you favorite website? ")
 //!     // Add some tab completions (Optional)
-//!     .suggester(&completion::Basic::new(&[
+//!     .suggester(&Basic::new(&[
 //!         "https://www.rust-lang.org/",
 //!         "https://docs.rs/",
 //!         "https://crates.io/",
