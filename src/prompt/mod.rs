@@ -53,7 +53,7 @@ use crate::actions::{action_for, Action, Direction, Overrider, Range, Scope};
 use crate::buffer::Buffer;
 use crate::completion::{Completer, Suggester};
 
-pub use builder::Builder;
+pub use builder::{from, new, Builder};
 
 /// The final outcome from reading the line.
 /// TODO: Document more

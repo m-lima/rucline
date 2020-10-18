@@ -3,11 +3,9 @@
 //TODO!!!!!
 #![allow(missing_docs)]
 // Document new changes
-// Get rid of Dummy
 // Can the closure come back
 // Can the iterator come back
 // Deal with colors
-// Can the builder be reused
 
 //! Rucline, the Rust CLI Line reader, or simply "recline", is a cross-platform, UTF-8 compatible
 //! line reader that provides hooks for autocompletion and tab suggestion. It supports advanced
@@ -97,6 +95,7 @@ pub mod context;
 pub mod prompt;
 
 pub use context::Context;
+pub use prompt::Outcome;
 
 pub use crossterm;
 pub use crossterm::ErrorKind;

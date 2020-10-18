@@ -41,23 +41,23 @@ macro_rules! boiler_plate {
     };
 }
 
+pub fn new() -> impl Builder {
+    Base {
+        prompt: None,
+        buffer: None,
+        erase_after_read: false,
+    }
+}
+
+pub fn from<S: ToString>(s: S) -> impl Builder {
+    Base {
+        prompt: Some(s.to_string()),
+        buffer: None,
+        erase_after_read: false,
+    }
+}
+
 pub trait Builder: ChainedLineReader + Sized {
-    fn new() -> Base {
-        Base {
-            prompt: None,
-            buffer: None,
-            erase_after_read: false,
-        }
-    }
-
-    fn from<S: ToString>(s: S) -> Base {
-        Base {
-            prompt: Some(s.to_string()),
-            buffer: None,
-            erase_after_read: false,
-        }
-    }
-
     /// Prepopulates the prompt input with `buffer`.
     ///
     /// # Arguments

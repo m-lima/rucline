@@ -284,8 +284,8 @@ impl Basic {
     ///
     /// * `options` - A list of `&str` to serve as options for completion and suggestions.
     #[must_use]
-    pub fn new(options: &[&str]) -> Self {
-        Self(options.iter().map(|s| String::from(*s)).collect())
+    pub fn new<S: AsRef<str>>(options: &[S]) -> Self {
+        Self(options.iter().map(|s| String::from(s.as_ref())).collect())
     }
 }
 
