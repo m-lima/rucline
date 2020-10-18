@@ -244,8 +244,8 @@ where
     }
 }
 
-pub(super) fn action_for(
-    overrides: Option<&dyn Overrider>,
+pub(super) fn action_for<O: Overrider + ?Sized>(
+    overrides: Option<&O>,
     event: Event,
     context: &impl Context,
 ) -> Action {

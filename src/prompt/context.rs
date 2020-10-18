@@ -1,16 +1,25 @@
-use super::{navigation, Buffer, Completer, Direction, Range, Scope, Suggester, Writer};
+use super::{Buffer, Completer, Direction, Range, Scope, Suggester, Writer};
+use crate::navigation;
 use crate::Context;
 
-pub(super) struct ContextImpl<'c, 's> {
+pub(super) struct ContextImpl<'c, 's, C, S>
+where
+    C: Completer + ?Sized,
+    S: Suggester + ?Sized,
+{
     writer: Writer,
     buffer: Buffer,
-    completer: Option<&'c dyn Completer>,
+    completer: Option<&'c C>,
     completion: Option<&'c str>,
-    suggester: Option<&'s dyn Suggester>,
+    suggester: Option<&'s S>,
     suggestions: Option<Suggestions<'s>>,
 }
 
-impl Context for ContextImpl<'_, '_> {
+impl<C, S> Context for ContextImpl<'_, '_, C, S>
+where
+    C: Completer + ?Sized,
+    S: Suggester + ?Sized,
+{
     #[inline]
     fn buffer(&self) -> &str {
         &self.buffer
@@ -22,16 +31,21 @@ impl Context for ContextImpl<'_, '_> {
     }
 }
 
-impl<'c, 's> ContextImpl<'c, 's> {
+impl<'c, 's, C, S> ContextImpl<'c, 's, C, S>
+where
+    C: Completer + ?Sized,
+    S: Suggester + ?Sized,
+{
     pub(super) fn new(
         erase_on_drop: bool,
         prompt: Option<&str>,
-        completer: Option<&'c dyn Completer>,
-        suggester: Option<&'s dyn Suggester>,
+        buffer: Option<Buffer>,
+        completer: Option<&'c C>,
+        suggester: Option<&'s S>,
     ) -> Result<Self, crate::ErrorKind> {
         Ok(Self {
             writer: Writer::new(erase_on_drop, prompt)?,
-            buffer: Buffer::new(),
+            buffer: buffer.unwrap_or_else(Buffer::new),
             completer,
             completion: None,
             suggester,
@@ -146,6 +160,16 @@ impl<'c, 's> ContextImpl<'c, 's> {
         if let Some(suggestion) = self.suggestions.take().and_then(Suggestions::take) {
             self.buffer = suggestion;
         }
+    }
+}
+
+impl<C, S> std::convert::Into<Buffer> for ContextImpl<'_, '_, C, S>
+where
+    C: Completer + ?Sized,
+    S: Suggester + ?Sized,
+{
+    fn into(self) -> Buffer {
+        self.buffer
     }
 }
 

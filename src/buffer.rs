@@ -1,32 +1,49 @@
 use crate::actions::{Direction, Range, Scope};
 
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum Error {
+    InvalidIndex,
+}
+
+impl std::error::Error for Error {}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(fmt, "invalid cursor position")
+    }
+}
+
 /// A `String` that also keeps track of its cursor position.
-pub(super) struct Buffer {
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Buffer {
     string: String,
     cursor: usize,
 }
 
-impl Default for Buffer {
-    fn default() -> Self {
-        Self {
-            string: String::new(),
-            cursor: 0,
-        }
-    }
-}
-
 impl Buffer {
     /// Creates an empty buffer.
-    pub(super) fn new() -> Self {
+    pub fn new() -> Self {
         Buffer::default()
     }
 
     /// Returns the current position of the cursor.
     #[inline]
-    pub(super) fn cursor(&self) -> usize {
+    pub fn cursor(&self) -> usize {
         self.cursor
     }
 
+    #[must_use]
+    pub fn set_cursor(&mut self, cursor: usize) -> Result<(), Error> {
+        if self.string.is_char_boundary(cursor) {
+            self.cursor = cursor;
+            Ok(())
+        } else {
+            Err(Error::InvalidIndex)
+        }
+    }
+}
+
+impl Buffer {
     /// Puts the cursor at the end of the buffer
     /// This is short-hand for `move_cursor(Range::Line, Direction::Forward)`
     #[inline]
@@ -154,6 +171,27 @@ impl Buffer {
     }
 }
 
+impl Default for Buffer {
+    fn default() -> Self {
+        Self {
+            string: String::new(),
+            cursor: 0,
+        }
+    }
+}
+
+impl<S> std::convert::From<S> for Buffer
+where
+    S: AsRef<str>,
+{
+    fn from(string: S) -> Self {
+        Self {
+            string: String::from(string.as_ref()),
+            cursor: string.as_ref().len(),
+        }
+    }
+}
+
 impl std::ops::Deref for Buffer {
     type Target = str;
 
@@ -166,15 +204,6 @@ impl std::ops::Deref for Buffer {
 impl std::fmt::Display for Buffer {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.string.fmt(fmt)
-    }
-}
-
-impl std::convert::From<&str> for Buffer {
-    fn from(string: &str) -> Self {
-        Self {
-            string: String::from(string),
-            cursor: string.len(),
-        }
     }
 }
 
