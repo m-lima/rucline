@@ -96,8 +96,6 @@ pub mod completion;
 pub mod context;
 pub mod prompt;
 
-mod navigation;
-
 pub use context::Context;
 
 pub use crossterm;

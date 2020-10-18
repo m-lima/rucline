@@ -1,5 +1,4 @@
 use super::{Buffer, Completer, Direction, Range, Scope, Suggester, Writer};
-use crate::navigation;
 use crate::Context;
 
 pub(super) struct ContextImpl<'c, 's, C, S>
@@ -92,24 +91,9 @@ where
             if completion.is_empty() {
                 Ok(())
             } else {
-                match range {
-                    Range::Line => {
-                        self.buffer.write_str(completion);
-                        self.update_completion();
-                        self.writer.print(&self.buffer, self.completion)
-                    }
-                    Range::Word => {
-                        let index = navigation::next_word(0, &completion);
-                        self.buffer.write_str(&completion[0..index]);
-                        self.update_completion();
-                        self.writer.print(&self.buffer, self.completion)
-                    }
-                    Range::Single => {
-                        self.buffer.write(completion.chars().next().unwrap());
-                        self.update_completion();
-                        self.writer.print(&self.buffer, self.completion)
-                    }
-                }
+                self.buffer.write_range(&completion, range);
+                self.update_completion();
+                self.writer.print(&self.buffer, self.completion)
             }
         } else {
             Ok(())

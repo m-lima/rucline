@@ -55,11 +55,6 @@ use crate::completion::{Completer, Suggester};
 
 pub use builder::Builder;
 
-/// TODO
-pub trait LineReader {
-    fn read_line(self) -> Result<Outcome, crate::ErrorKind>;
-}
-
 /// The final outcome from reading the line.
 /// TODO: Document more
 pub enum Outcome {
