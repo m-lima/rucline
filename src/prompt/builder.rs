@@ -18,21 +18,21 @@ macro_rules! boiler_plate {
     };
 
     (extensions) => {
-        fn overrider<O: Overrider>(self, overrider: &O) -> WithOverrider<'_, O, Self::Base> {
+        fn overrider<O: Overrider>(self, overrider: &O) -> WithOverrider<'_, O, Self> {
             WithOverrider {
                 base: self,
                 overrider,
             }
         }
 
-        fn completer<C: Completer>(self, completer: &C) -> WithCompleter<'_, C, Self::Base> {
+        fn completer<C: Completer>(self, completer: &C) -> WithCompleter<'_, C, Self> {
             WithCompleter {
                 base: self,
                 completer,
             }
         }
 
-        fn suggester<S: Suggester>(self, suggester: &S) -> WithSuggester<'_, S, Self::Base> {
+        fn suggester<S: Suggester>(self, suggester: &S) -> WithSuggester<'_, S, Self> {
             WithSuggester {
                 base: self,
                 suggester,
@@ -41,9 +41,7 @@ macro_rules! boiler_plate {
     };
 }
 
-pub trait Builder: ChainedLineReader {
-    type Base: Builder;
-
+pub trait Builder: ChainedLineReader + Sized {
     fn new() -> Base {
         Base {
             prompt: None,
@@ -86,7 +84,7 @@ pub trait Builder: ChainedLineReader {
     /// * [`overrider`] - The new overrider
     ///
     /// [`Overrider`]: ../actions/trait.Overrider.html
-    fn overrider<O: Overrider>(self, overrider: &O) -> WithOverrider<'_, O, Self::Base>;
+    fn overrider<O: Overrider>(self, overrider: &O) -> WithOverrider<'_, O, Self>;
 
     /// Sets the in-line completion provider.
     ///
@@ -95,7 +93,7 @@ pub trait Builder: ChainedLineReader {
     /// * [`completer`] - The new completer
     ///
     /// [`Completer`]: ../completion/trait.Completer.html
-    fn completer<C: Completer>(self, completer: &C) -> WithCompleter<'_, C, Self::Base>;
+    fn completer<C: Completer>(self, completer: &C) -> WithCompleter<'_, C, Self>;
 
     /// Sets the drop-down suggestion provider.
     ///
@@ -104,7 +102,7 @@ pub trait Builder: ChainedLineReader {
     /// * [`suggester`] - The new suggester
     ///
     /// [`Suggester`]: ../completion/trait.Suggester.html
-    fn suggester<S: Suggester>(self, suggester: &S) -> WithSuggester<'_, S, Self::Base>;
+    fn suggester<S: Suggester>(self, suggester: &S) -> WithSuggester<'_, S, Self>;
 
     fn read_line(self) -> Result<Outcome, crate::ErrorKind>;
 }
@@ -156,8 +154,6 @@ where
 }
 
 impl Builder for Base {
-    type Base = Self;
-
     fn buffer(mut self, buffer: Buffer) -> Self {
         self.buffer = Some(buffer);
         self
@@ -187,8 +183,6 @@ where
     T: Overrider + ?Sized,
     B: Builder,
 {
-    type Base = Self;
-
     boiler_plate!(base);
     boiler_plate!(extensions);
 
@@ -203,8 +197,6 @@ where
     T: Completer + ?Sized,
     B: Builder,
 {
-    type Base = Self;
-
     boiler_plate!(base);
     boiler_plate!(extensions);
 
@@ -219,8 +211,6 @@ where
     T: Suggester + ?Sized,
     B: Builder,
 {
-    type Base = Self;
-
     boiler_plate!(base);
     boiler_plate!(extensions);
 
