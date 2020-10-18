@@ -18,21 +18,21 @@ macro_rules! boiler_plate {
     };
 
     (extensions) => {
-        fn overrider<'o, O: Overrider>(self, overrider: &'o O) -> WithOverrider<'o, O, Self::Base> {
+        fn overrider<O: Overrider>(self, overrider: &O) -> WithOverrider<'_, O, Self::Base> {
             WithOverrider {
                 base: self,
                 overrider,
             }
         }
 
-        fn completer<'c, C: Completer>(self, completer: &'c C) -> WithCompleter<'c, C, Self::Base> {
+        fn completer<C: Completer>(self, completer: &C) -> WithCompleter<'_, C, Self::Base> {
             WithCompleter {
                 base: self,
                 completer,
             }
         }
 
-        fn suggester<'s, S: Suggester>(self, suggester: &'s S) -> WithSuggester<'s, S, Self::Base> {
+        fn suggester<S: Suggester>(self, suggester: &S) -> WithSuggester<'_, S, Self::Base> {
             WithSuggester {
                 base: self,
                 suggester,
@@ -86,7 +86,7 @@ pub trait Builder: ChainedLineReader {
     /// * [`overrider`] - The new overrider
     ///
     /// [`Overrider`]: ../actions/trait.Overrider.html
-    fn overrider<'o, O: Overrider>(self, overrider: &'o O) -> WithOverrider<'o, O, Self::Base>;
+    fn overrider<O: Overrider>(self, overrider: &O) -> WithOverrider<'_, O, Self::Base>;
 
     /// Sets the in-line completion provider.
     ///
@@ -95,7 +95,7 @@ pub trait Builder: ChainedLineReader {
     /// * [`completer`] - The new completer
     ///
     /// [`Completer`]: ../completion/trait.Completer.html
-    fn completer<'c, C: Completer>(self, completer: &'c C) -> WithCompleter<'c, C, Self::Base>;
+    fn completer<C: Completer>(self, completer: &C) -> WithCompleter<'_, C, Self::Base>;
 
     /// Sets the drop-down suggestion provider.
     ///
@@ -104,17 +104,17 @@ pub trait Builder: ChainedLineReader {
     /// * [`suggester`] - The new suggester
     ///
     /// [`Suggester`]: ../completion/trait.Suggester.html
-    fn suggester<'s, S: Suggester>(self, suggester: &'s S) -> WithSuggester<'s, S, Self::Base>;
+    fn suggester<S: Suggester>(self, suggester: &S) -> WithSuggester<'_, S, Self::Base>;
 
     fn read_line(self) -> Result<Outcome, crate::ErrorKind>;
 }
 
 pub trait ChainedLineReader {
-    fn chain_read_line<'o, 'c, 's, O, C, S>(
+    fn chain_read_line<O, C, S>(
         self,
-        overrider: Option<&'o O>,
-        completer: Option<&'c C>,
-        suggester: Option<&'s S>,
+        overrider: Option<&O>,
+        completer: Option<&C>,
+        suggester: Option<&S>,
     ) -> Result<Outcome, crate::ErrorKind>
     where
         O: Overrider + ?Sized,
@@ -231,11 +231,11 @@ where
 }
 
 impl ChainedLineReader for Base {
-    fn chain_read_line<'o, 'c, 's, O, C, S>(
+    fn chain_read_line<O, C, S>(
         self,
-        overrider: Option<&'o O>,
-        completer: Option<&'c C>,
-        suggester: Option<&'s S>,
+        overrider: Option<&O>,
+        completer: Option<&C>,
+        suggester: Option<&S>,
     ) -> Result<Outcome, crate::ErrorKind>
     where
         O: Overrider + ?Sized,
@@ -258,11 +258,11 @@ where
     O: Overrider + ?Sized,
     B: Builder,
 {
-    fn chain_read_line<'r, 'c, 's, R, C, S>(
+    fn chain_read_line<R, C, S>(
         self,
-        _: Option<&'r R>,
-        completer: Option<&'c C>,
-        suggester: Option<&'s S>,
+        _: Option<&R>,
+        completer: Option<&C>,
+        suggester: Option<&S>,
     ) -> Result<Outcome, crate::ErrorKind>
     where
         R: Overrider + ?Sized,
@@ -279,11 +279,11 @@ where
     C: Completer + ?Sized,
     B: Builder,
 {
-    fn chain_read_line<'o, 'r, 's, O, R, S>(
+    fn chain_read_line<O, R, S>(
         self,
-        overrider: Option<&'o O>,
-        _: Option<&'r R>,
-        suggester: Option<&'s S>,
+        overrider: Option<&O>,
+        _: Option<&R>,
+        suggester: Option<&S>,
     ) -> Result<Outcome, crate::ErrorKind>
     where
         O: Overrider + ?Sized,
@@ -300,11 +300,11 @@ where
     S: Suggester + ?Sized,
     B: Builder,
 {
-    fn chain_read_line<'o, 'c, 'r, O, C, R>(
+    fn chain_read_line<O, C, R>(
         self,
-        overrider: Option<&'o O>,
-        completer: Option<&'c C>,
-        _: Option<&'r R>,
+        overrider: Option<&O>,
+        completer: Option<&C>,
+        _: Option<&R>,
     ) -> Result<Outcome, crate::ErrorKind>
     where
         O: Overrider + ?Sized,
