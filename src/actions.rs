@@ -124,7 +124,7 @@
 //! [`Action`]: enum.Action.html
 //! [`Noop`]: enum.Action.html#variant.Noop
 
-pub use crate::Context;
+pub use crate::Buffer;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -226,36 +226,36 @@ pub trait Overrider {
     ///
     /// [`Event`]: type.Event.html
     /// [`Context`]: ../prompt/context/trait.Context.html
-    fn override_for(&self, event: Event, context: &dyn Context) -> Option<Action>;
+    fn override_for(&self, event: Event, buffer: &Buffer) -> Option<Action>;
 }
 
 impl Overrider for KeyBindings {
-    fn override_for(&self, event: Event, _: &dyn Context) -> Option<Action> {
+    fn override_for(&self, event: Event, _: &Buffer) -> Option<Action> {
         self.get(&event).copied()
     }
 }
 
 impl<F> Overrider for F
 where
-    F: Fn(Event, &dyn Context) -> Option<Action>,
+    F: Fn(Event, &Buffer) -> Option<Action>,
 {
-    fn override_for(&self, event: Event, context: &dyn Context) -> Option<Action> {
-        self(event, context)
+    fn override_for(&self, event: Event, buffer: &Buffer) -> Option<Action> {
+        self(event, buffer)
     }
 }
 
 pub(super) fn action_for<O: Overrider + ?Sized>(
     overrides: Option<&O>,
     event: Event,
-    context: &impl Context,
+    buffer: &Buffer,
 ) -> Action {
     if let Some(action) = overrides
         .as_ref()
-        .and_then(|b| b.override_for(event, context))
+        .and_then(|b| b.override_for(event, buffer))
     {
         action
     } else {
-        default_action(event, context)
+        default_action(event, buffer)
     }
 }
 
@@ -270,8 +270,8 @@ fn alt_pressed(event: &Event) -> bool {
 }
 
 #[inline]
-fn complete_if_at_end_else_move(context: &impl Context, range: Range) -> Action {
-    if context.cursor() == context.buffer().len() {
+fn complete_if_at_end_else_move(buffer: &Buffer, range: Range) -> Action {
+    if buffer.cursor() == buffer.len() {
         if range == Range::Word {
             Action::Complete(Range::Word)
         } else {
@@ -282,7 +282,7 @@ fn complete_if_at_end_else_move(context: &impl Context, range: Range) -> Action 
     }
 }
 
-fn default_action(event: Event, context: &impl Context) -> Action {
+fn default_action(event: Event, buffer: &Buffer) -> Action {
     use crossterm::event::KeyCode;
     use Action::{Accept, Cancel, Delete, Move, Noop, Suggest, Write};
     use Direction::{Backward, Forward};
@@ -296,10 +296,10 @@ fn default_action(event: Event, context: &impl Context) -> Action {
         KeyCode::BackTab => Suggest(Backward),
         KeyCode::Backspace => Delete(Relative(Single, Backward)),
         KeyCode::Delete => Delete(Relative(Single, Forward)),
-        KeyCode::Right => complete_if_at_end_else_move(context, Single),
+        KeyCode::Right => complete_if_at_end_else_move(buffer, Single),
         KeyCode::Left => Move(Single, Backward),
         KeyCode::Home => Move(Line, Backward),
-        KeyCode::End => complete_if_at_end_else_move(context, Line),
+        KeyCode::End => complete_if_at_end_else_move(buffer, Line),
         KeyCode::Char(c) => {
             if control_pressed(&event) {
                 match c {
@@ -307,9 +307,9 @@ fn default_action(event: Event, context: &impl Context) -> Action {
                     'c' => Cancel,
 
                     'b' => Move(Single, Backward),
-                    'f' => complete_if_at_end_else_move(context, Single),
+                    'f' => complete_if_at_end_else_move(buffer, Single),
                     'a' => Move(Line, Backward),
-                    'e' => complete_if_at_end_else_move(context, Line),
+                    'e' => complete_if_at_end_else_move(buffer, Line),
 
                     'j' => Delete(Relative(Word, Backward)),
                     'k' => Delete(Relative(Word, Forward)),
@@ -322,7 +322,7 @@ fn default_action(event: Event, context: &impl Context) -> Action {
             } else if alt_pressed(&event) {
                 match c {
                     'b' => Move(Word, Backward),
-                    'f' => complete_if_at_end_else_move(context, Word),
+                    'f' => complete_if_at_end_else_move(buffer, Word),
                     _ => Noop,
                 }
             } else {

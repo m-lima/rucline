@@ -1,6 +1,7 @@
 use super::Buffer;
 
 // TODO: Keep track of lines
+// TODO: Deal with colors
 pub(super) struct Writer {
     erase_on_drop: Option<usize>,
     printed_length: usize,

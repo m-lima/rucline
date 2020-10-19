@@ -67,7 +67,7 @@
 //! [`Completer`]: trait.Completer.html
 //! [`Suggester`]: trait.Suggester.html
 
-pub use crate::Context;
+pub use crate::Buffer;
 
 /// Completes the buffer in-line.
 ///
@@ -128,7 +128,7 @@ pub trait Completer {
     /// [`Context`]: ../prompt/context/trait.Context.html
     /// [`Completer`]: trait.Completer.html
     /// [`Basic`]: struct.Basic.html#implementations
-    fn complete_for(&self, context: &dyn Context) -> Option<std::borrow::Cow<'_, str>>;
+    fn complete_for(&self, buffer: &Buffer) -> Option<std::borrow::Cow<'_, str>>;
 }
 
 /// Generates a list of possible values for the [`Prompt`] buffer, usually associated with the
@@ -179,55 +179,53 @@ pub trait Suggester {
     /// [`Basic`]: struct.Basic.html#implementations
     /// [`Completer`]: trait.Completer.html
     /// [`Context`]: ../prompt/context/trait.Context.html
-    fn suggest_for(&self, context: &dyn Context) -> Vec<std::borrow::Cow<'_, str>>;
+    fn suggest_for(&self, buffer: &Buffer) -> Vec<std::borrow::Cow<'_, str>>;
 }
 
 impl<F> Completer for F
 where
-    F: Fn(&dyn Context) -> Option<std::borrow::Cow<'static, str>>,
+    F: Fn(&Buffer) -> Option<std::borrow::Cow<'static, str>>,
 {
-    fn complete_for(&self, context: &dyn Context) -> Option<std::borrow::Cow<'_, str>> {
-        self(context)
+    fn complete_for(&self, buffer: &Buffer) -> Option<std::borrow::Cow<'_, str>> {
+        self(buffer)
     }
 }
 
 impl<F> Suggester for F
 where
-    F: Fn(&dyn Context) -> Vec<std::borrow::Cow<'static, str>>,
+    F: Fn(&Buffer) -> Vec<std::borrow::Cow<'static, str>>,
 {
-    fn suggest_for(&self, context: &dyn Context) -> Vec<std::borrow::Cow<'_, str>> {
-        self(context)
+    fn suggest_for(&self, buffer: &Buffer) -> Vec<std::borrow::Cow<'_, str>> {
+        self(buffer)
     }
 }
 
 impl<S: AsRef<str>> Completer for Vec<S> {
-    fn complete_for(&self, context: &dyn Context) -> Option<std::borrow::Cow<'_, str>> {
-        let buffer = context.buffer();
+    fn complete_for(&self, buffer: &Buffer) -> Option<std::borrow::Cow<'_, str>> {
         if buffer.is_empty() {
             None
         } else {
             self.iter()
-                .find(|completion| completion.as_ref().starts_with(buffer))
+                .find(|completion| completion.as_ref().starts_with(buffer.as_str()))
                 .map(|completion| (completion.as_ref()[buffer.len()..]).into())
         }
     }
 }
 
 impl<S: AsRef<str>> Completer for [S] {
-    fn complete_for(&self, context: &dyn Context) -> Option<std::borrow::Cow<'_, str>> {
-        let buffer = context.buffer();
+    fn complete_for(&self, buffer: &Buffer) -> Option<std::borrow::Cow<'_, str>> {
         if buffer.is_empty() {
             None
         } else {
             self.iter()
-                .find(|completion| completion.as_ref().starts_with(buffer))
+                .find(|completion| completion.as_ref().starts_with(buffer.as_str()))
                 .map(|completion| (completion.as_ref()[buffer.len()..]).into())
         }
     }
 }
 
 impl<S: AsRef<str>> Suggester for Vec<S> {
-    fn suggest_for(&self, _: &dyn Context) -> Vec<std::borrow::Cow<'_, str>> {
+    fn suggest_for(&self, _: &Buffer) -> Vec<std::borrow::Cow<'_, str>> {
         self.iter()
             .map(|suggestion| suggestion.as_ref().into())
             .collect()
@@ -235,7 +233,7 @@ impl<S: AsRef<str>> Suggester for Vec<S> {
 }
 
 impl<S: AsRef<str>> Suggester for [S] {
-    fn suggest_for(&self, _: &dyn Context) -> Vec<std::borrow::Cow<'_, str>> {
+    fn suggest_for(&self, _: &Buffer) -> Vec<std::borrow::Cow<'_, str>> {
         self.iter()
             .map(|suggestion| suggestion.as_ref().into())
             .collect()

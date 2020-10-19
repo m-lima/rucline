@@ -1,7 +1,8 @@
 use super::{Buffer, Completer, Direction, Range, Scope, Suggester, Writer};
-use crate::Context;
 
-pub(super) struct ContextImpl<'c, 's, C, S>
+use crate::ErrorKind;
+
+pub(super) struct Context<'c, 's, C, S>
 where
     C: Completer + ?Sized,
     S: Suggester + ?Sized,
@@ -14,23 +15,7 @@ where
     suggestions: Option<Suggestions<'s>>,
 }
 
-impl<C, S> Context for ContextImpl<'_, '_, C, S>
-where
-    C: Completer + ?Sized,
-    S: Suggester + ?Sized,
-{
-    #[inline]
-    fn buffer(&self) -> &str {
-        &self.buffer
-    }
-
-    #[inline]
-    fn cursor(&self) -> usize {
-        self.buffer.cursor()
-    }
-}
-
-impl<'c, 's, C, S> ContextImpl<'c, 's, C, S>
+impl<'c, 's, C, S> Context<'c, 's, C, S>
 where
     C: Completer + ?Sized,
     S: Suggester + ?Sized,
@@ -41,7 +26,7 @@ where
         buffer: Option<Buffer>,
         completer: Option<&'c C>,
         suggester: Option<&'s S>,
-    ) -> Result<Self, crate::ErrorKind> {
+    ) -> Result<Self, ErrorKind> {
         Ok(Self {
             writer: Writer::new(erase_on_drop, prompt)?,
             buffer: buffer.unwrap_or_else(Buffer::new),
@@ -57,18 +42,18 @@ where
         self.buffer.to_string()
     }
 
-    pub(super) fn print(&mut self) -> Result<(), crate::ErrorKind> {
+    pub(super) fn print(&mut self) -> Result<(), ErrorKind> {
         self.writer.print(&self.buffer, self.completion.as_deref())
     }
 
-    pub(super) fn write(&mut self, c: char) -> Result<(), crate::ErrorKind> {
+    pub(super) fn write(&mut self, c: char) -> Result<(), ErrorKind> {
         self.try_take_suggestion();
         self.buffer.write(c);
         self.update_completion();
         self.writer.print(&self.buffer, self.completion.as_deref())
     }
 
-    pub(super) fn delete(&mut self, scope: Scope) -> Result<(), crate::ErrorKind> {
+    pub(super) fn delete(&mut self, scope: Scope) -> Result<(), ErrorKind> {
         self.try_take_suggestion();
         self.buffer.delete(scope);
         self.update_completion();
@@ -79,13 +64,13 @@ where
         &mut self,
         range: Range,
         direction: Direction,
-    ) -> Result<(), crate::ErrorKind> {
+    ) -> Result<(), ErrorKind> {
         self.try_take_suggestion();
         self.buffer.move_cursor(range, direction);
         self.writer.print(&self.buffer, self.completion.as_deref())
     }
 
-    pub(super) fn complete(&mut self, range: Range) -> Result<(), crate::ErrorKind> {
+    pub(super) fn complete(&mut self, range: Range) -> Result<(), ErrorKind> {
         self.buffer.go_to_end();
         if let Some(completion) = &self.completion {
             if completion.is_empty() {
@@ -106,7 +91,7 @@ where
         }
     }
 
-    pub(super) fn suggest(&mut self, direction: Direction) -> Result<(), crate::ErrorKind> {
+    pub(super) fn suggest(&mut self, direction: Direction) -> Result<(), ErrorKind> {
         if let Some(suggester) = &self.suggester {
             if let Some(suggestions) = &mut self.suggestions {
                 suggestions.cycle(direction);
@@ -134,7 +119,7 @@ where
         self.suggestions.is_some()
     }
 
-    pub(super) fn cancel_suggestion(&mut self) -> Result<(), crate::ErrorKind> {
+    pub(super) fn cancel_suggestion(&mut self) -> Result<(), ErrorKind> {
         self.suggestions = None;
         self.writer.print(&self.buffer, self.completion.as_deref())
     }
@@ -146,13 +131,24 @@ where
     }
 }
 
-impl<C, S> std::convert::Into<Buffer> for ContextImpl<'_, '_, C, S>
+impl<C, S> std::convert::Into<Buffer> for Context<'_, '_, C, S>
 where
     C: Completer + ?Sized,
     S: Suggester + ?Sized,
 {
     fn into(self) -> Buffer {
         self.buffer
+    }
+}
+
+impl<C, S> std::ops::Deref for Context<'_, '_, C, S>
+where
+    C: Completer + ?Sized,
+    S: Suggester + ?Sized,
+{
+    type Target = Buffer;
+    fn deref(&self) -> &Self::Target {
+        &self.buffer
     }
 }
 

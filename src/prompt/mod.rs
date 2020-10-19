@@ -46,7 +46,7 @@ mod builder;
 mod context;
 mod writer;
 
-use context::ContextImpl;
+use context::Context;
 use writer::Writer;
 
 use crate::actions::{action_for, Action, Direction, Overrider, Range, Scope};
@@ -94,7 +94,7 @@ where
     C: Completer + ?Sized,
     S: Suggester + ?Sized,
 {
-    let mut context = ContextImpl::new(
+    let mut context = Context::new(
         erase_after_read,
         prompt.as_deref(),
         buffer.clone(),

@@ -33,6 +33,12 @@ impl Buffer {
         buffer.set_cursor(cursor).map(|_| buffer)
     }
 
+    /// Returns the current buffer string.
+    #[inline]
+    pub fn as_str(&self) -> &str {
+        &self.string
+    }
+
     /// Returns the current position of the cursor.
     #[inline]
     pub fn cursor(&self) -> usize {
