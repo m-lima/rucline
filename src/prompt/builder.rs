@@ -3,6 +3,7 @@ use super::Outcome;
 use crate::actions::Overrider;
 use crate::buffer::Buffer;
 use crate::completion::{Completer, Suggester};
+use crate::ErrorKind;
 
 macro_rules! boiler_plate {
     (base) => {
@@ -18,43 +19,48 @@ macro_rules! boiler_plate {
     };
 
     (extensions) => {
-        fn overrider<O: Overrider>(self, overrider: &O) -> WithOverrider<'_, O, Self> {
+        fn overrider<O: Overrider>(self, overrider: O) -> WithOverrider<O, Self> {
             WithOverrider {
                 base: self,
                 overrider,
             }
         }
 
-        fn completer<C: Completer>(self, completer: &C) -> WithCompleter<'_, C, Self> {
+        fn overrider_ref<O: Overrider>(self, overrider: &O) -> WithRefOverrider<'_, O, Self> {
+            WithRefOverrider {
+                base: self,
+                overrider,
+            }
+        }
+
+        fn completer<C: Completer>(self, completer: C) -> WithCompleter<C, Self> {
             WithCompleter {
                 base: self,
                 completer,
             }
         }
 
-        fn suggester<S: Suggester>(self, suggester: &S) -> WithSuggester<'_, S, Self> {
+        fn completer_ref<C: Completer>(self, completer: &C) -> WithRefCompleter<'_, C, Self> {
+            WithRefCompleter {
+                base: self,
+                completer,
+            }
+        }
+
+        fn suggester<S: Suggester>(self, suggester: S) -> WithSuggester<S, Self> {
             WithSuggester {
                 base: self,
                 suggester,
             }
         }
+
+        fn suggester_ref<S: Suggester>(self, suggester: &S) -> WithRefSuggester<'_, S, Self> {
+            WithRefSuggester {
+                base: self,
+                suggester,
+            }
+        }
     };
-}
-
-pub fn new() -> impl Builder {
-    Base {
-        prompt: None,
-        buffer: None,
-        erase_after_read: false,
-    }
-}
-
-pub fn from<S: ToString>(s: S) -> impl Builder {
-    Base {
-        prompt: Some(s.to_string()),
-        buffer: None,
-        erase_after_read: false,
-    }
 }
 
 pub trait Builder: ChainedLineReader + Sized {
@@ -84,7 +90,16 @@ pub trait Builder: ChainedLineReader + Sized {
     /// * [`overrider`] - The new overrider
     ///
     /// [`Overrider`]: ../actions/trait.Overrider.html
-    fn overrider<O: Overrider>(self, overrider: &O) -> WithOverrider<'_, O, Self>;
+    fn overrider<O: Overrider>(self, overrider: O) -> WithOverrider<O, Self>;
+
+    /// Modifies the behavior of the prompt by setting a [`Overrider`].
+    ///
+    /// # Arguments
+    ///
+    /// * [`overrider`] - The new overrider
+    ///
+    /// [`Overrider`]: ../actions/trait.Overrider.html
+    fn overrider_ref<O: Overrider>(self, overrider: &O) -> WithRefOverrider<'_, O, Self>;
 
     /// Sets the in-line completion provider.
     ///
@@ -93,7 +108,16 @@ pub trait Builder: ChainedLineReader + Sized {
     /// * [`completer`] - The new completer
     ///
     /// [`Completer`]: ../completion/trait.Completer.html
-    fn completer<C: Completer>(self, completer: &C) -> WithCompleter<'_, C, Self>;
+    fn completer<C: Completer>(self, completer: C) -> WithCompleter<C, Self>;
+
+    /// Sets the in-line completion provider.
+    ///
+    /// # Arguments
+    ///
+    /// * [`completer`] - The new completer
+    ///
+    /// [`Completer`]: ../completion/trait.Completer.html
+    fn completer_ref<C: Completer>(self, completer: &C) -> WithRefCompleter<'_, C, Self>;
 
     /// Sets the drop-down suggestion provider.
     ///
@@ -102,9 +126,18 @@ pub trait Builder: ChainedLineReader + Sized {
     /// * [`suggester`] - The new suggester
     ///
     /// [`Suggester`]: ../completion/trait.Suggester.html
-    fn suggester<S: Suggester>(self, suggester: &S) -> WithSuggester<'_, S, Self>;
+    fn suggester<S: Suggester>(self, suggester: S) -> WithSuggester<S, Self>;
 
-    fn read_line(self) -> Result<Outcome, crate::ErrorKind>;
+    /// Sets the drop-down suggestion provider.
+    ///
+    /// # Arguments
+    ///
+    /// * [`suggester`] - The new suggester
+    ///
+    /// [`Suggester`]: ../completion/trait.Suggester.html
+    fn suggester_ref<S: Suggester>(self, suggester: &S) -> WithRefSuggester<'_, S, Self>;
+
+    fn read_line(self) -> Result<Outcome, ErrorKind>;
 }
 
 pub trait ChainedLineReader {
@@ -113,20 +146,65 @@ pub trait ChainedLineReader {
         overrider: Option<&O>,
         completer: Option<&C>,
         suggester: Option<&S>,
-    ) -> Result<Outcome, crate::ErrorKind>
+    ) -> Result<Outcome, ErrorKind>
     where
         O: Overrider + ?Sized,
         C: Completer + ?Sized,
         S: Suggester + ?Sized;
 }
 
-pub struct Base {
+pub struct Prompt {
     prompt: Option<String>,
     buffer: Option<Buffer>,
     erase_after_read: bool,
 }
 
-pub struct WithOverrider<'o, O, B>
+impl Prompt {
+    pub fn new() -> Self {
+        Self {
+            prompt: None,
+            buffer: None,
+            erase_after_read: false,
+        }
+    }
+
+    pub fn from<S: ToString>(s: S) -> Self {
+        Self {
+            prompt: Some(s.to_string()),
+            buffer: None,
+            erase_after_read: false,
+        }
+    }
+}
+
+pub struct WithOverrider<O, B>
+where
+    O: Overrider,
+    B: Builder,
+{
+    base: B,
+    overrider: O,
+}
+
+pub struct WithCompleter<C, B>
+where
+    C: Completer,
+    B: Builder,
+{
+    base: B,
+    completer: C,
+}
+
+pub struct WithSuggester<S, B>
+where
+    S: Suggester,
+    B: Builder,
+{
+    base: B,
+    suggester: S,
+}
+
+pub struct WithRefOverrider<'o, O, B>
 where
     O: Overrider + ?Sized,
     B: Builder,
@@ -135,7 +213,7 @@ where
     overrider: &'o O,
 }
 
-pub struct WithCompleter<'c, C, B>
+pub struct WithRefCompleter<'c, C, B>
 where
     C: Completer + ?Sized,
     B: Builder,
@@ -144,7 +222,7 @@ where
     completer: &'c C,
 }
 
-pub struct WithSuggester<'s, S, B>
+pub struct WithRefSuggester<'s, S, B>
 where
     S: Suggester + ?Sized,
     B: Builder,
@@ -153,7 +231,7 @@ where
     suggester: &'s S,
 }
 
-impl Builder for Base {
+impl Builder for Prompt {
     fn buffer(mut self, buffer: Buffer) -> Self {
         self.buffer = Some(buffer);
         self
@@ -166,7 +244,7 @@ impl Builder for Base {
 
     boiler_plate!(extensions);
 
-    fn read_line(self) -> Result<Outcome, crate::ErrorKind> {
+    fn read_line(self) -> Result<Outcome, ErrorKind> {
         super::read_line::<Dummy, Dummy, Dummy>(
             self.prompt.as_deref(),
             self.buffer,
@@ -178,7 +256,49 @@ impl Builder for Base {
     }
 }
 
-impl<T, B> Builder for WithOverrider<'_, T, B>
+impl<T, B> Builder for WithOverrider<T, B>
+where
+    T: Overrider,
+    B: Builder,
+{
+    boiler_plate!(base);
+    boiler_plate!(extensions);
+
+    fn read_line(self) -> Result<Outcome, ErrorKind> {
+        self.base
+            .chain_read_line::<T, Dummy, Dummy>(Some(&self.overrider), None, None)
+    }
+}
+
+impl<T, B> Builder for WithCompleter<T, B>
+where
+    T: Completer,
+    B: Builder,
+{
+    boiler_plate!(base);
+    boiler_plate!(extensions);
+
+    fn read_line(self) -> Result<Outcome, ErrorKind> {
+        self.base
+            .chain_read_line::<Dummy, T, Dummy>(None, Some(&self.completer), None)
+    }
+}
+
+impl<T, B> Builder for WithSuggester<T, B>
+where
+    T: Suggester,
+    B: Builder,
+{
+    boiler_plate!(base);
+    boiler_plate!(extensions);
+
+    fn read_line(self) -> Result<Outcome, ErrorKind> {
+        self.base
+            .chain_read_line::<Dummy, Dummy, T>(None, None, Some(&self.suggester))
+    }
+}
+
+impl<T, B> Builder for WithRefOverrider<'_, T, B>
 where
     T: Overrider + ?Sized,
     B: Builder,
@@ -186,13 +306,13 @@ where
     boiler_plate!(base);
     boiler_plate!(extensions);
 
-    fn read_line(self) -> Result<Outcome, crate::ErrorKind> {
+    fn read_line(self) -> Result<Outcome, ErrorKind> {
         self.base
             .chain_read_line::<T, Dummy, Dummy>(Some(self.overrider), None, None)
     }
 }
 
-impl<T, B> Builder for WithCompleter<'_, T, B>
+impl<T, B> Builder for WithRefCompleter<'_, T, B>
 where
     T: Completer + ?Sized,
     B: Builder,
@@ -200,13 +320,13 @@ where
     boiler_plate!(base);
     boiler_plate!(extensions);
 
-    fn read_line(self) -> Result<Outcome, crate::ErrorKind> {
+    fn read_line(self) -> Result<Outcome, ErrorKind> {
         self.base
             .chain_read_line::<Dummy, T, Dummy>(None, Some(self.completer), None)
     }
 }
 
-impl<T, B> Builder for WithSuggester<'_, T, B>
+impl<T, B> Builder for WithRefSuggester<'_, T, B>
 where
     T: Suggester + ?Sized,
     B: Builder,
@@ -214,19 +334,19 @@ where
     boiler_plate!(base);
     boiler_plate!(extensions);
 
-    fn read_line(self) -> Result<Outcome, crate::ErrorKind> {
+    fn read_line(self) -> Result<Outcome, ErrorKind> {
         self.base
             .chain_read_line::<Dummy, Dummy, T>(None, None, Some(self.suggester))
     }
 }
 
-impl ChainedLineReader for Base {
+impl ChainedLineReader for Prompt {
     fn chain_read_line<O, C, S>(
         self,
         overrider: Option<&O>,
         completer: Option<&C>,
         suggester: Option<&S>,
-    ) -> Result<Outcome, crate::ErrorKind>
+    ) -> Result<Outcome, ErrorKind>
     where
         O: Overrider + ?Sized,
         C: Completer + ?Sized,
@@ -243,7 +363,70 @@ impl ChainedLineReader for Base {
     }
 }
 
-impl<O, B> ChainedLineReader for WithOverrider<'_, O, B>
+impl<O, B> ChainedLineReader for WithOverrider<O, B>
+where
+    O: Overrider,
+    B: Builder,
+{
+    fn chain_read_line<R, C, S>(
+        self,
+        _: Option<&R>,
+        completer: Option<&C>,
+        suggester: Option<&S>,
+    ) -> Result<Outcome, ErrorKind>
+    where
+        R: Overrider + ?Sized,
+        C: Completer + ?Sized,
+        S: Suggester + ?Sized,
+    {
+        self.base
+            .chain_read_line(Some(&self.overrider), completer, suggester)
+    }
+}
+
+impl<C, B> ChainedLineReader for WithCompleter<C, B>
+where
+    C: Completer,
+    B: Builder,
+{
+    fn chain_read_line<O, R, S>(
+        self,
+        overrider: Option<&O>,
+        _: Option<&R>,
+        suggester: Option<&S>,
+    ) -> Result<Outcome, ErrorKind>
+    where
+        O: Overrider + ?Sized,
+        R: Completer + ?Sized,
+        S: Suggester + ?Sized,
+    {
+        self.base
+            .chain_read_line(overrider, Some(&self.completer), suggester)
+    }
+}
+
+impl<S, B> ChainedLineReader for WithSuggester<S, B>
+where
+    S: Suggester,
+    B: Builder,
+{
+    fn chain_read_line<O, C, R>(
+        self,
+        overrider: Option<&O>,
+        completer: Option<&C>,
+        _: Option<&R>,
+    ) -> Result<Outcome, ErrorKind>
+    where
+        O: Overrider + ?Sized,
+        C: Completer + ?Sized,
+        R: Suggester + ?Sized,
+    {
+        self.base
+            .chain_read_line(overrider, completer, Some(&self.suggester))
+    }
+}
+
+impl<O, B> ChainedLineReader for WithRefOverrider<'_, O, B>
 where
     O: Overrider + ?Sized,
     B: Builder,
@@ -253,7 +436,7 @@ where
         _: Option<&R>,
         completer: Option<&C>,
         suggester: Option<&S>,
-    ) -> Result<Outcome, crate::ErrorKind>
+    ) -> Result<Outcome, ErrorKind>
     where
         R: Overrider + ?Sized,
         C: Completer + ?Sized,
@@ -264,7 +447,7 @@ where
     }
 }
 
-impl<C, B> ChainedLineReader for WithCompleter<'_, C, B>
+impl<C, B> ChainedLineReader for WithRefCompleter<'_, C, B>
 where
     C: Completer + ?Sized,
     B: Builder,
@@ -274,7 +457,7 @@ where
         overrider: Option<&O>,
         _: Option<&R>,
         suggester: Option<&S>,
-    ) -> Result<Outcome, crate::ErrorKind>
+    ) -> Result<Outcome, ErrorKind>
     where
         O: Overrider + ?Sized,
         R: Completer + ?Sized,
@@ -285,7 +468,7 @@ where
     }
 }
 
-impl<S, B> ChainedLineReader for WithSuggester<'_, S, B>
+impl<S, B> ChainedLineReader for WithRefSuggester<'_, S, B>
 where
     S: Suggester + ?Sized,
     B: Builder,
@@ -295,7 +478,7 @@ where
         overrider: Option<&O>,
         completer: Option<&C>,
         _: Option<&R>,
-    ) -> Result<Outcome, crate::ErrorKind>
+    ) -> Result<Outcome, ErrorKind>
     where
         O: Overrider + ?Sized,
         C: Completer + ?Sized,

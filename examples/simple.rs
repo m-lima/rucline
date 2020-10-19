@@ -1,20 +1,20 @@
-use colored::Colorize;
-use rucline::completion;
-use rucline::Prompt;
+use rucline::crossterm::style::Styler;
+use rucline::prompt::{Builder, Prompt};
+use rucline::Outcome::Accepted;
 
 fn main() {
-    if let Ok(Some(string)) = Prompt::from("What's you favorite website? ".bold())
+    if let Ok(Accepted(string)) = Prompt::from("What's you favorite website? ".bold())
         // Add some likely values as completions
-        .completer(&completion::Basic::new(&[
+        .completer(vec![
             "https://www.rust-lang.org/",
             "https://docs.rs/",
             "https://crates.io/",
-        ]))
+        ])
         // Add some tab completions
-        .suggester(&completion::Basic::new(&[
+        .suggester(vec![
             "https://www.startpage.com/",
             "https://www.google.com/",
-        ]))
+        ])
         //Block until value is ready
         .read_line()
     {

@@ -1,8 +1,9 @@
 #![cfg(unix)]
-use colored::Colorize;
+use rucline::crossterm::style::Colorize;
+use rucline::prompt::{Builder, Prompt};
+use rucline::Outcome::Accepted;
+
 use pwner::Spawner;
-use rucline::completion;
-use rucline::Prompt;
 use std::io::{Read, Write};
 use std::process::Command;
 
@@ -16,8 +17,8 @@ fn main() {
     let mut buffer = [0_u8; 1024];
 
     // While there is some data read
-    while let Ok(Some(input)) = Prompt::from("cat> ".green())
-        .completer(&completion::Basic::new(&["quit"]))
+    while let Ok(Accepted(input)) = Prompt::from("cat> ".green())
+        .completer(vec!["quit"])
         .read_line()
     {
         // If the user wants to quit, do so

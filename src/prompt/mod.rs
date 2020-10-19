@@ -53,7 +53,7 @@ use crate::actions::{action_for, Action, Direction, Overrider, Range, Scope};
 use crate::buffer::Buffer;
 use crate::completion::{Completer, Suggester};
 
-pub use builder::{from, new, Builder};
+pub use builder::{Builder, Prompt};
 
 /// The final outcome from reading the line.
 /// TODO: Document more
@@ -62,6 +62,39 @@ pub enum Outcome {
     Accepted(String),
     /// TODO
     Canceled(Buffer),
+}
+
+impl Outcome {
+    pub fn was_acceoted(&self) -> bool {
+        if let Outcome::Accepted(_) = self {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn unwrap(self) -> String {
+        if let Outcome::Accepted(string) = self {
+            string
+        } else {
+            panic!("called `Outcome::unwrap()` on a `Canceled` value")
+        }
+    }
+
+    pub fn some(self) -> Option<String> {
+        if let Outcome::Accepted(string) = self {
+            Some(string)
+        } else {
+            None
+        }
+    }
+
+    pub fn ok(self) -> Result<String, Buffer> {
+        match self {
+            Outcome::Accepted(string) => Ok(string),
+            Outcome::Canceled(buffer) => Err(buffer),
+        }
+    }
 }
 
 // TODO: Support crossterm async

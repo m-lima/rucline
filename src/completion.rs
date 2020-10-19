@@ -182,24 +182,6 @@ pub trait Suggester {
     fn suggest_for(&self, buffer: &Buffer) -> Vec<std::borrow::Cow<'_, str>>;
 }
 
-impl<F> Completer for F
-where
-    F: Fn(&Buffer) -> Option<std::borrow::Cow<'static, str>>,
-{
-    fn complete_for(&self, buffer: &Buffer) -> Option<std::borrow::Cow<'_, str>> {
-        self(buffer)
-    }
-}
-
-impl<F> Suggester for F
-where
-    F: Fn(&Buffer) -> Vec<std::borrow::Cow<'static, str>>,
-{
-    fn suggest_for(&self, buffer: &Buffer) -> Vec<std::borrow::Cow<'_, str>> {
-        self(buffer)
-    }
-}
-
 impl<S: AsRef<str>> Completer for Vec<S> {
     fn complete_for(&self, buffer: &Buffer) -> Option<std::borrow::Cow<'_, str>> {
         if buffer.is_empty() {
@@ -237,6 +219,24 @@ impl<S: AsRef<str>> Suggester for [S] {
         self.iter()
             .map(|suggestion| suggestion.as_ref().into())
             .collect()
+    }
+}
+
+impl<F> Completer for F
+where
+    F: Fn(&Buffer) -> Option<std::borrow::Cow<'static, str>>,
+{
+    fn complete_for(&self, buffer: &Buffer) -> Option<std::borrow::Cow<'_, str>> {
+        self(buffer)
+    }
+}
+
+impl<F> Suggester for F
+where
+    F: Fn(&Buffer) -> Vec<std::borrow::Cow<'static, str>>,
+{
+    fn suggest_for(&self, buffer: &Buffer) -> Vec<std::borrow::Cow<'_, str>> {
+        self(buffer)
     }
 }
 
