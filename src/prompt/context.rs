@@ -9,7 +9,7 @@ where
     writer: Writer,
     buffer: Buffer,
     completer: Option<&'c C>,
-    completion: Option<&'c str>,
+    completion: Option<std::borrow::Cow<'c, str>>,
     suggester: Option<&'s S>,
     suggestions: Option<Suggestions<'s>>,
 }
@@ -58,21 +58,21 @@ where
     }
 
     pub(super) fn print(&mut self) -> Result<(), crate::ErrorKind> {
-        self.writer.print(&self.buffer, self.completion)
+        self.writer.print(&self.buffer, self.completion.as_deref())
     }
 
     pub(super) fn write(&mut self, c: char) -> Result<(), crate::ErrorKind> {
         self.try_take_suggestion();
         self.buffer.write(c);
         self.update_completion();
-        self.writer.print(&self.buffer, self.completion)
+        self.writer.print(&self.buffer, self.completion.as_deref())
     }
 
     pub(super) fn delete(&mut self, scope: Scope) -> Result<(), crate::ErrorKind> {
         self.try_take_suggestion();
         self.buffer.delete(scope);
         self.update_completion();
-        self.writer.print(&self.buffer, self.completion)
+        self.writer.print(&self.buffer, self.completion.as_deref())
     }
 
     pub(super) fn move_cursor(
@@ -82,7 +82,7 @@ where
     ) -> Result<(), crate::ErrorKind> {
         self.try_take_suggestion();
         self.buffer.move_cursor(range, direction);
-        self.writer.print(&self.buffer, self.completion)
+        self.writer.print(&self.buffer, self.completion.as_deref())
     }
 
     pub(super) fn complete(&mut self, range: Range) -> Result<(), crate::ErrorKind> {
@@ -93,7 +93,7 @@ where
             } else {
                 self.buffer.write_range(&completion, range);
                 self.update_completion();
-                self.writer.print(&self.buffer, self.completion)
+                self.writer.print(&self.buffer, self.completion.as_deref())
             }
         } else {
             Ok(())
@@ -102,7 +102,7 @@ where
 
     fn update_completion(&mut self) {
         if let Some(completer) = self.completer {
-            self.completion = completer.complete_for(self).map(std::convert::Into::into);
+            self.completion = completer.complete_for(self);
         }
     }
 
@@ -111,15 +111,14 @@ where
             if let Some(suggestions) = &mut self.suggestions {
                 suggestions.cycle(direction);
                 if let Some(index) = suggestions.index {
-                    return self.writer.print_suggestions(index, &suggestions.options);
+                    return self
+                        .writer
+                        .print_suggestions(index, suggestions.options.as_ref());
                 }
             } else {
                 let options = suggester.suggest_for(self);
                 if !options.is_empty() {
-                    self.suggestions = Some(Suggestions::new(
-                        options.into_iter().map(std::convert::Into::into).collect(),
-                        direction,
-                    ));
+                    self.suggestions = Some(Suggestions::new(options, direction));
                     let suggestions = self.suggestions.as_ref().unwrap();
                     return self
                         .writer
@@ -128,7 +127,7 @@ where
             }
         }
 
-        self.writer.print(&self.buffer, self.completion)
+        self.writer.print(&self.buffer, self.completion.as_deref())
     }
 
     pub(super) fn is_suggesting(&self) -> bool {
@@ -137,7 +136,7 @@ where
 
     pub(super) fn cancel_suggestion(&mut self) -> Result<(), crate::ErrorKind> {
         self.suggestions = None;
-        self.writer.print(&self.buffer, self.completion)
+        self.writer.print(&self.buffer, self.completion.as_deref())
     }
 
     fn try_take_suggestion(&mut self) {
@@ -159,11 +158,11 @@ where
 
 struct Suggestions<'a> {
     index: Option<usize>,
-    options: Vec<&'a str>,
+    options: Vec<std::borrow::Cow<'a, str>>,
 }
 
 impl<'a> Suggestions<'a> {
-    fn new(options: Vec<&'a str>, direction: Direction) -> Self {
+    fn new(options: Vec<std::borrow::Cow<'a, str>>, direction: Direction) -> Self {
         let index = match direction {
             Direction::Forward => 0,
             Direction::Backward => options.len() - 1,

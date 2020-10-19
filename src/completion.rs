@@ -128,7 +128,7 @@ pub trait Completer {
     /// [`Context`]: ../prompt/context/trait.Context.html
     /// [`Completer`]: trait.Completer.html
     /// [`Basic`]: struct.Basic.html#implementations
-    fn complete_for(&self, context: &dyn Context) -> Option<&str>;
+    fn complete_for(&self, context: &dyn Context) -> Option<std::borrow::Cow<'_, str>>;
 }
 
 /// Generates a list of possible values for the [`Prompt`] buffer, usually associated with the
@@ -179,135 +179,66 @@ pub trait Suggester {
     /// [`Basic`]: struct.Basic.html#implementations
     /// [`Completer`]: trait.Completer.html
     /// [`Context`]: ../prompt/context/trait.Context.html
-    fn suggest_for(&self, context: &dyn Context) -> Vec<&str>;
+    fn suggest_for(&self, context: &dyn Context) -> Vec<std::borrow::Cow<'_, str>>;
 }
 
-/// A wrapper that converts a lambda into a [`Completer`] or a [`Suggester`].
-///
-/// The valid signatures for the lambdas are:
-/// * [`Completer`] - `Fn(&dyn Context) -> Option<&str>`
-/// * [`Suggester`] - `Fn(&dyn Context) -> Vec<&str>`
-///
-/// **Note:**
-/// When declaring the lambda, it is necessary to let Rust know of the lifetime of the [`Context`].
-/// So, even if ignoring the argument, the type must be specified for Rust to infer the proper
-/// lifetimes.
-///
-/// # Example
-///
-/// Simple no-op completers:
-///
-/// ```no_run
-/// use rucline::completion::{Context, Lambda};
-/// let inline_completer = Lambda::from(|_: &dyn Context| None);
-/// let dropdown_suggester = Lambda::from(|_: &dyn Context| vec![]);
-/// ```
-///
-/// [`Completer`]: trait.Completer.html
-/// [`Context`]: ../prompt/context/trait.Context.html
-/// [`Suggester`]: trait.Suggester.html
-pub struct Lambda<'a, F, R>
+impl<F> Completer for F
 where
-    F: Fn(&dyn Context) -> R,
+    F: Fn(&dyn Context) -> Option<std::borrow::Cow<'static, str>>,
 {
-    lambda: F,
-    _phantom: std::marker::PhantomData<&'a ()>,
-}
-
-impl<'a, F> std::convert::From<F> for Lambda<'a, F, Option<&'a str>>
-where
-    F: Fn(&dyn Context) -> Option<&'a str>,
-{
-    fn from(lambda: F) -> Self {
-        Self {
-            lambda,
-            _phantom: std::marker::PhantomData {},
-        }
+    fn complete_for(&self, context: &dyn Context) -> Option<std::borrow::Cow<'_, str>> {
+        self(context)
     }
 }
 
-impl<'a, F> std::convert::From<F> for Lambda<'a, F, Vec<&'a str>>
+impl<F> Suggester for F
 where
-    F: Fn(&dyn Context) -> Vec<&'a str>,
+    F: Fn(&dyn Context) -> Vec<std::borrow::Cow<'static, str>>,
 {
-    fn from(lambda: F) -> Self {
-        Self {
-            lambda,
-            _phantom: std::marker::PhantomData {},
-        }
+    fn suggest_for(&self, context: &dyn Context) -> Vec<std::borrow::Cow<'_, str>> {
+        self(context)
     }
 }
 
-impl<'a, F> Completer for Lambda<'a, F, Option<&'a str>>
-where
-    F: Fn(&dyn Context) -> Option<&'a str>,
-{
-    fn complete_for(&self, context: &dyn Context) -> Option<&str> {
-        (self.lambda)(context)
-    }
-}
-
-impl<'a, F> Suggester for Lambda<'a, F, Vec<&'a str>>
-where
-    F: Fn(&dyn Context) -> Vec<&'a str>,
-{
-    fn suggest_for(&self, context: &dyn Context) -> Vec<&str> {
-        (self.lambda)(context)
-    }
-}
-
-/// A basic implementation of a completion provider serving both as an example and as a useful
-/// simple completer and suggester.
-///
-/// The default behavior for the traits are:
-/// * [`Completer`] - Return all the matches that start with the current [`Context`]
-/// buffer for in-line completions.
-/// * [`Suggester`] - Return all the entries.
-///
-/// [`Completer`]: trait.Completer.html
-/// [`Context`]: ../prompt/context/trait.Context.html
-/// [`Suggester`]: trait.Suggester.html
-pub struct Basic(Vec<String>);
-
-impl Basic {
-    /// Creates a new instance from the list of `options` given.
-    ///
-    /// # Example
-    ///
-    /// ```no_run
-    /// use rucline::completion::Basic;
-    ///
-    /// let basic = Basic::new(&["some programmer was here", "some developer was there"]);
-    /// ```
-    ///
-    /// # Arguments
-    ///
-    /// * `options` - A list of `&str` to serve as options for completion and suggestions.
-    #[must_use]
-    pub fn new<S: AsRef<str>>(options: &[S]) -> Self {
-        Self(options.iter().map(|s| String::from(s.as_ref())).collect())
-    }
-}
-
-impl Completer for Basic {
-    // Allowed because it is more readable this way
-    #[allow(clippy::find_map)]
-    fn complete_for(&self, context: &dyn Context) -> Option<&str> {
+impl<S: AsRef<str>> Completer for Vec<S> {
+    fn complete_for(&self, context: &dyn Context) -> Option<std::borrow::Cow<'_, str>> {
         let buffer = context.buffer();
         if buffer.is_empty() {
             None
         } else {
-            self.0
-                .iter()
-                .find(|completion| completion.starts_with(buffer))
-                .map(|completion| &completion[buffer.len()..])
+            self.iter()
+                .find(|completion| completion.as_ref().starts_with(buffer))
+                .map(|completion| (completion.as_ref()[buffer.len()..]).into())
         }
     }
 }
 
-impl Suggester for Basic {
-    fn suggest_for(&self, _: &dyn Context) -> Vec<&str> {
-        self.0.iter().map(String::as_str).collect()
+impl<S: AsRef<str>> Completer for [S] {
+    fn complete_for(&self, context: &dyn Context) -> Option<std::borrow::Cow<'_, str>> {
+        let buffer = context.buffer();
+        if buffer.is_empty() {
+            None
+        } else {
+            self.iter()
+                .find(|completion| completion.as_ref().starts_with(buffer))
+                .map(|completion| (completion.as_ref()[buffer.len()..]).into())
+        }
+    }
+}
+
+impl<S: AsRef<str>> Suggester for Vec<S> {
+    fn suggest_for(&self, _: &dyn Context) -> Vec<std::borrow::Cow<'_, str>> {
+        self.iter()
+            .map(|suggestion| suggestion.as_ref().into())
+            .collect()
+    }
+}
+
+impl<S: AsRef<str>> Suggester for [S] {
+    fn suggest_for(&self, _: &dyn Context) -> Vec<std::borrow::Cow<'_, str>> {
+        self.iter()
+            .map(|suggestion| suggestion.as_ref().into())
+            .collect()
     }
 }
 

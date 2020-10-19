@@ -319,13 +319,13 @@ impl Overrider for Dummy {
 }
 
 impl Completer for Dummy {
-    fn complete_for(&self, _: &dyn crate::Context) -> Option<&str> {
+    fn complete_for(&self, _: &dyn crate::Context) -> Option<std::borrow::Cow<'_, str>> {
         unimplemented!()
     }
 }
 
 impl Suggester for Dummy {
-    fn suggest_for(&self, _: &dyn crate::Context) -> Vec<&str> {
+    fn suggest_for(&self, _: &dyn crate::Context) -> Vec<std::borrow::Cow<'_, str>> {
         unimplemented!()
     }
 }

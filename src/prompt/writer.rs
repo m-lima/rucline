@@ -67,7 +67,7 @@ impl Writer {
     pub(super) fn print_suggestions(
         &mut self,
         selected_index: usize,
-        suggestions: &[&str],
+        suggestions: &[std::borrow::Cow<'_, str>],
     ) -> Result<(), crate::ErrorKind> {
         use std::io::Write;
         use unicode_segmentation::UnicodeSegmentation;
@@ -75,7 +75,7 @@ impl Writer {
         let mut stdout = std::io::stdout();
 
         // Print buffer
-        let buffer = suggestions[selected_index];
+        let buffer = suggestions[selected_index].as_ref();
         clear_from(&mut stdout, self.printed_length - self.cursor_offset)?;
         crossterm::queue!(stdout, crossterm::style::Print(buffer))?;
         self.cursor_offset = 0;

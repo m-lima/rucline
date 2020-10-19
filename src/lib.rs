@@ -3,8 +3,10 @@
 //TODO!!!!!
 #![allow(missing_docs)]
 // Document new changes
-// Can the closure come back
-// Can the iterator come back
+// Can the closure come back?
+// Can the iterator come back?
+// can completer return AsRef<str>?
+// Can completers take a buffer?
 // Deal with colors
 
 //! Rucline, the Rust CLI Line reader, or simply "recline", is a cross-platform, UTF-8 compatible
