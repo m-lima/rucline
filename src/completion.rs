@@ -226,7 +226,7 @@ impl<F> Completer for F
 where
     F: Fn(&Buffer) -> Option<std::borrow::Cow<'static, str>>,
 {
-    fn complete_for(&self, buffer: &Buffer) -> Option<std::borrow::Cow<'_, str>> {
+    fn complete_for(&self, buffer: &Buffer) -> Option<std::borrow::Cow<'static, str>> {
         self(buffer)
     }
 }
@@ -235,7 +235,7 @@ impl<F> Suggester for F
 where
     F: Fn(&Buffer) -> Vec<std::borrow::Cow<'static, str>>,
 {
-    fn suggest_for(&self, buffer: &Buffer) -> Vec<std::borrow::Cow<'_, str>> {
+    fn suggest_for(&self, buffer: &Buffer) -> Vec<std::borrow::Cow<'static, str>> {
         self(buffer)
     }
 }

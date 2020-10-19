@@ -1,6 +1,6 @@
 use super::Outcome;
 
-use crate::actions::Overrider;
+use crate::actions::{Action, Event, Overrider};
 use crate::buffer::Buffer;
 use crate::completion::{Completer, Suggester};
 use crate::ErrorKind;
@@ -26,6 +26,16 @@ macro_rules! boiler_plate {
             }
         }
 
+        fn overrider_fn<O>(self, overrider: O) -> WithOverrider<O, Self>
+        where
+            O: Fn(Event, &Buffer) -> Option<Action>,
+        {
+            WithOverrider {
+                base: self,
+                overrider,
+            }
+        }
+
         fn overrider_ref<O: Overrider>(self, overrider: &O) -> WithRefOverrider<'_, O, Self> {
             WithRefOverrider {
                 base: self,
@@ -40,6 +50,16 @@ macro_rules! boiler_plate {
             }
         }
 
+        fn completer_fn<C>(self, completer: C) -> WithCompleter<C, Self>
+        where
+            C: Fn(&Buffer) -> Option<std::borrow::Cow<'static, str>>,
+        {
+            WithCompleter {
+                base: self,
+                completer,
+            }
+        }
+
         fn completer_ref<C: Completer>(self, completer: &C) -> WithRefCompleter<'_, C, Self> {
             WithRefCompleter {
                 base: self,
@@ -48,6 +68,16 @@ macro_rules! boiler_plate {
         }
 
         fn suggester<S: Suggester>(self, suggester: S) -> WithSuggester<S, Self> {
+            WithSuggester {
+                base: self,
+                suggester,
+            }
+        }
+
+        fn suggester_fn<S>(self, suggester: S) -> WithSuggester<S, Self>
+        where
+            S: Fn(&Buffer) -> Vec<std::borrow::Cow<'static, str>>,
+        {
             WithSuggester {
                 base: self,
                 suggester,
@@ -92,7 +122,18 @@ pub trait Builder: ChainedLineReader + Sized {
     /// [`Overrider`]: ../actions/trait.Overrider.html
     fn overrider<O: Overrider>(self, overrider: O) -> WithOverrider<O, Self>;
 
-    /// Modifies the behavior of the prompt by setting a [`Overrider`].
+    /// Modifies the behavior of the prompt by setting a [`Overrider`] closure.
+    ///
+    /// # Arguments
+    ///
+    /// * [`overrider`] - The new overrider
+    ///
+    /// [`Overrider`]: ../actions/trait.Overrider.html
+    fn overrider_fn<O>(self, overrider: O) -> WithOverrider<O, Self>
+    where
+        O: Fn(Event, &Buffer) -> Option<Action>;
+
+    /// Modifies the behavior of the prompt by setting a [`Overrider`] reference.
     ///
     /// # Arguments
     ///
@@ -117,6 +158,17 @@ pub trait Builder: ChainedLineReader + Sized {
     /// * [`completer`] - The new completer
     ///
     /// [`Completer`]: ../completion/trait.Completer.html
+    fn completer_fn<C>(self, completer: C) -> WithCompleter<C, Self>
+    where
+        C: Fn(&Buffer) -> Option<std::borrow::Cow<'static, str>>;
+
+    /// Sets the in-line completion provider.
+    ///
+    /// # Arguments
+    ///
+    /// * [`completer`] - The new completer
+    ///
+    /// [`Completer`]: ../completion/trait.Completer.html
     fn completer_ref<C: Completer>(self, completer: &C) -> WithRefCompleter<'_, C, Self>;
 
     /// Sets the drop-down suggestion provider.
@@ -127,6 +179,17 @@ pub trait Builder: ChainedLineReader + Sized {
     ///
     /// [`Suggester`]: ../completion/trait.Suggester.html
     fn suggester<S: Suggester>(self, suggester: S) -> WithSuggester<S, Self>;
+
+    /// Sets the drop-down suggestion provider.
+    ///
+    /// # Arguments
+    ///
+    /// * [`suggester`] - The new suggester
+    ///
+    /// [`Suggester`]: ../completion/trait.Suggester.html
+    fn suggester_fn<S>(self, suggester: S) -> WithSuggester<S, Self>
+    where
+        S: Fn(&Buffer) -> Vec<std::borrow::Cow<'static, str>>;
 
     /// Sets the drop-down suggestion provider.
     ///
