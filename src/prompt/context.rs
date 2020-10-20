@@ -70,6 +70,8 @@ where
         self.writer.print(&self.buffer, self.completion.as_deref())
     }
 
+    // Allowed because using map requires a `self` borrow
+    #[allow(clippy::option_if_let_else)]
     pub(super) fn complete(&mut self, range: Range) -> Result<(), ErrorKind> {
         self.buffer.go_to_end();
         if let Some(completion) = &self.completion {
@@ -188,10 +190,7 @@ impl<'a> Suggestions<'a> {
     }
 
     fn take(mut self) -> Option<Buffer> {
-        if let Some(index) = self.index {
-            Some(Buffer::from(self.options.swap_remove(index)))
-        } else {
-            None
-        }
+        self.index
+            .map(|index| Buffer::from(self.options.swap_remove(index)))
     }
 }

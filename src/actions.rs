@@ -242,18 +242,14 @@ where
 }
 
 pub(super) fn action_for<O: Overrider + ?Sized>(
-    overrides: Option<&O>,
+    overrider: Option<&O>,
     event: Event,
     buffer: &Buffer,
 ) -> Action {
-    if let Some(action) = overrides
+    overrider
         .as_ref()
         .and_then(|b| b.override_for(event, buffer))
-    {
-        action
-    } else {
-        default_action(event, buffer)
-    }
+        .unwrap_or_else(|| default_action(event, buffer))
 }
 
 #[inline]

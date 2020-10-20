@@ -24,10 +24,27 @@ pub struct Buffer {
 
 impl Buffer {
     /// Creates an empty buffer.
+    #[must_use]
     pub fn new() -> Self {
         Buffer::default()
     }
 
+    /// Creates a new [`Buffer`] from `string` with a preset cursor position.
+    ///
+    /// This is a short-hand for:
+    /// ```no_run
+    /// # use rucline::buffer::{Buffer, Error};
+    /// # fn with_cursor(string: String, cursor: usize) -> Result<(), Error> {
+    /// let mut buffer = Buffer::from(string);
+    /// buffer.set_cursor(cursor)
+    /// # }
+    /// ```
+    ///
+    /// # Errors
+    /// * [`Error`] - If the curosr position does not fall into a character boundary.
+    ///
+    /// [`Error`]: enum.Error.html
+    /// [`Buffer`]: struct.Buffer.html
     pub fn new_with_cursor<S: AsRef<str>>(string: S, cursor: usize) -> Result<Self, Error> {
         let mut buffer = Buffer::from(string);
         buffer.set_cursor(cursor).map(|_| buffer)
@@ -35,17 +52,25 @@ impl Buffer {
 
     /// Returns the current buffer string.
     #[inline]
+    #[must_use]
     pub fn as_str(&self) -> &str {
         &self.string
     }
 
     /// Returns the current position of the cursor.
     #[inline]
+    #[must_use]
     pub fn cursor(&self) -> usize {
         self.cursor
     }
 
-    #[must_use]
+    /// Sets the cursor position in the [`buffer`].
+    ///
+    /// # Errors
+    /// * [`Error`] - If the curosr position does not fall into a character boundary.
+    ///
+    /// [`Error`]: enum.Error.html
+    /// [`buffer`]: struct.Buffer.html
     pub fn set_cursor(&mut self, cursor: usize) -> Result<(), Error> {
         if self.string.is_char_boundary(cursor) {
             self.cursor = cursor;
@@ -55,7 +80,8 @@ impl Buffer {
         }
     }
 
-    /// Puts the cursor at the end of the buffer
+    /// Puts the cursor at the end of the buffer.
+    ///
     /// This is short-hand for `move_cursor(Range::Line, Direction::Forward)`
     #[inline]
     pub fn go_to_end(&mut self) {

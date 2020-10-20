@@ -182,44 +182,54 @@ pub trait Suggester {
     fn suggest_for(&self, buffer: &Buffer) -> Vec<std::borrow::Cow<'_, str>>;
 }
 
-impl<S: AsRef<str>> Completer for Vec<S> {
-    fn complete_for(&self, buffer: &Buffer) -> Option<std::borrow::Cow<'_, str>> {
-        if buffer.is_empty() {
-            None
-        } else {
-            self.iter()
-                .find(|completion| completion.as_ref().starts_with(buffer.as_str()))
-                .map(|completion| (completion.as_ref()[buffer.len()..]).into())
+macro_rules! impl_completion {
+    (completer) => {
+        fn complete_for(&self, buffer: &Buffer) -> Option<std::borrow::Cow<'_, str>> {
+            if buffer.is_empty() {
+                None
+            } else {
+                self.iter().find_map(|completion| {
+                    if completion.as_ref().starts_with(buffer.as_str()) {
+                        Some((completion.as_ref()[buffer.len()..]).into())
+                    } else {
+                        None
+                    }
+                })
+            }
         }
-    }
+    };
+
+    (suggester) => {
+        fn suggest_for(&self, _: &Buffer) -> Vec<std::borrow::Cow<'_, str>> {
+            self.iter()
+                .map(|suggestion| suggestion.as_ref().into())
+                .collect()
+        }
+    };
+}
+
+impl<S: AsRef<str>> Completer for Vec<S> {
+    impl_completion!(completer);
 }
 
 impl<S: AsRef<str>> Completer for [S] {
-    fn complete_for(&self, buffer: &Buffer) -> Option<std::borrow::Cow<'_, str>> {
-        if buffer.is_empty() {
-            None
-        } else {
-            self.iter()
-                .find(|completion| completion.as_ref().starts_with(buffer.as_str()))
-                .map(|completion| (completion.as_ref()[buffer.len()..]).into())
-        }
-    }
+    impl_completion!(completer);
+}
+
+impl<S: AsRef<str>> Completer for &[S] {
+    impl_completion!(completer);
 }
 
 impl<S: AsRef<str>> Suggester for Vec<S> {
-    fn suggest_for(&self, _: &Buffer) -> Vec<std::borrow::Cow<'_, str>> {
-        self.iter()
-            .map(|suggestion| suggestion.as_ref().into())
-            .collect()
-    }
+    impl_completion!(suggester);
 }
 
 impl<S: AsRef<str>> Suggester for [S] {
-    fn suggest_for(&self, _: &Buffer) -> Vec<std::borrow::Cow<'_, str>> {
-        self.iter()
-            .map(|suggestion| suggestion.as_ref().into())
-            .collect()
-    }
+    impl_completion!(suggester);
+}
+
+impl<S: AsRef<str>> Suggester for &[S] {
+    impl_completion!(suggester);
 }
 
 #[cfg(test)]

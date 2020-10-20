@@ -237,6 +237,7 @@ pub struct Prompt {
 }
 
 impl Prompt {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             prompt: None,
@@ -244,8 +245,16 @@ impl Prompt {
             erase_after_read: false,
         }
     }
+}
 
-    pub fn from<S: ToString>(s: S) -> Self {
+impl Default for Prompt {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<S: ToString> std::convert::From<S> for Prompt {
+    fn from(s: S) -> Self {
         Self {
             prompt: Some(s.to_string()),
             buffer: None,

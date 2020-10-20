@@ -44,14 +44,12 @@ pub enum Outcome {
 }
 
 impl Outcome {
+    #[must_use]
     pub fn was_acceoted(&self) -> bool {
-        if let Outcome::Accepted(_) = self {
-            true
-        } else {
-            false
-        }
+        matches!(self, Outcome::Accepted(_))
     }
 
+    #[must_use]
     pub fn unwrap(self) -> String {
         if let Outcome::Accepted(string) = self {
             string
@@ -60,6 +58,7 @@ impl Outcome {
         }
     }
 
+    #[must_use]
     pub fn some(self) -> Option<String> {
         if let Outcome::Accepted(string) = self {
             Some(string)
@@ -109,7 +108,7 @@ where
     let mut context = Context::new(
         erase_after_read,
         prompt.as_deref(),
-        buffer.clone(),
+        buffer,
         completer,
         suggester,
     )?;
