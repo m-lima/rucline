@@ -335,8 +335,7 @@ fn default_action(event: Event, buffer: &Buffer) -> Action {
 
 #[cfg(test)]
 mod test {
-    use super::{action_for, default_action, Action, Direction, Event, Range};
-    use crate::test::mock::Context as Mock;
+    use super::{action_for, default_action, Action, Buffer, Direction, Event, Range};
 
     #[test]
     fn should_complete_if_at_end() {
@@ -346,7 +345,7 @@ mod test {
         use Direction::Forward;
         use Range::{Line, Single, Word};
 
-        let mut c = Mock::from("a");
+        let mut c = "a".into();
 
         assert_eq!(default_action(Event::from(Right), &c), Complete(Line));
         assert_eq!(default_action(Event::from(End), &c), Complete(Line));
@@ -359,7 +358,7 @@ mod test {
             Complete(Word)
         );
 
-        c.cursor = 0;
+        c.set_cursor(0).unwrap();
 
         assert_eq!(
             default_action(Event::from(Right), &c),
@@ -379,19 +378,18 @@ mod test {
     #[test]
     fn should_default_if_no_mapping() {
         use crossterm::event::KeyCode::Tab;
-        let action = action_for(None, Event::from(Tab), &Mock::empty());
+        let action = action_for::<String>(None, Event::from(Tab), &Buffer::new());
         assert_eq!(action, Action::Suggest(Direction::Forward));
     }
 
     mod basic {
-        use super::super::{action_for, Action, Direction, Event, KeyBindings};
-        use super::Mock;
+        use super::super::{action_for, Action, Buffer, Direction, Event, KeyBindings};
         use crossterm::event::KeyCode::Tab;
 
         #[test]
         fn should_default_if_event_missing_form_mapping() {
             let overrider = KeyBindings::new();
-            let action = action_for(Some(&overrider), Event::from(Tab), &Mock::empty());
+            let action = action_for(Some(&overrider), Event::from(Tab), &Buffer::new());
             assert_eq!(action, Action::Suggest(Direction::Forward));
         }
 
@@ -399,33 +397,32 @@ mod test {
         fn should_override_if_defined() {
             let mut bindings = KeyBindings::new();
             bindings.insert(Event::from(Tab), Action::Write('\t'));
-            let action = action_for(Some(&bindings), Event::from(Tab), &Mock::empty());
+            let action = action_for(Some(&bindings), Event::from(Tab), &Buffer::new());
             assert_eq!(action, Action::Write('\t'));
         }
     }
 
-    mod lambda {
-        use super::super::{action_for, Action, Context, Direction, Event};
-        use super::Mock;
+    mod closure {
+        use super::super::{action_for, Action, Buffer, Direction, Event};
         use crossterm::event::KeyCode::Tab;
 
         #[test]
         fn should_default_if_event_missing_form_mapping() {
-            let overrider = |_, _: &dyn Context| None;
-            let action = action_for(Some(&overrider), Event::from(Tab), &Mock::empty());
+            let overrider = |_, _: &Buffer| None;
+            let action = action_for(Some(&overrider), Event::from(Tab), &Buffer::new());
             assert_eq!(action, Action::Suggest(Direction::Forward));
         }
 
         #[test]
         fn should_override_if_defined() {
-            let overrider = |e, _: &dyn Context| {
+            let overrider = |e, _: &Buffer| {
                 if e == Event::from(Tab) {
                     Some(Action::Write('\t'))
                 } else {
                     None
                 }
             };
-            let action = action_for(Some(&overrider), Event::from(Tab), &Mock::empty());
+            let action = action_for(Some(&overrider), Event::from(Tab), &Buffer::new());
             assert_eq!(action, Action::Write('\t'));
         }
     }

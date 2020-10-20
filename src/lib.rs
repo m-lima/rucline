@@ -2,6 +2,8 @@
 #![warn(rust_2018_idioms)]
 //TODO!!!!!
 #![allow(missing_docs)]
+// TOdo: Work around the 'static
+// TOdo:Generalize Vecotrs in completions
 
 //! Rucline, the Rust CLI Line reader, or simply "recline", is a cross-platform, UTF-8 compatible
 //! line reader that provides hooks for autocompletion and tab suggestion. It supports advanced
@@ -94,6 +96,3 @@ pub use prompt::Outcome;
 
 pub use crossterm;
 pub use crossterm::ErrorKind;
-
-#[cfg(test)]
-pub(crate) mod test;

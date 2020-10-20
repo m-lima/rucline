@@ -242,75 +242,75 @@ where
 
 #[cfg(test)]
 mod test {
-    mod basic {
-        use super::super::{Basic, Completer, Suggester};
-        use crate::test::mock::Context as Mock;
+    mod list {
+        use super::super::{Buffer, Completer, Suggester};
+        use std::borrow::Cow;
 
         #[test]
         fn should_not_complete_if_empty() {
-            let basic = Basic::new(&["some programmer was here", "some developer was there"]);
-            assert_eq!(basic.complete_for(&Mock::empty()), None);
+            let list = ["some programmer was here", "some developer was there"];
+            assert_eq!(list.complete_for(&Buffer::new()), None);
         }
 
         #[test]
         fn should_not_complete_if_context_is_different() {
-            let basic = Basic::new(&["some programmer was here", "some developer was there"]);
-            assert_eq!(basic.complete_for(&Mock::from("a")), None);
+            let list = ["some programmer was here", "some developer was there"];
+            assert_eq!(list.complete_for(&"a".into()), None);
         }
 
         #[test]
         fn complete_the_first_match() {
-            let basic = Basic::new(&["zz", "b3", "b2"]);
-            let expected = "3";
-            assert_eq!(basic.complete_for(&Mock::from("b")), Some(expected));
+            let list = ["zz", "b3", "b2"];
+            let expected = Cow::Borrowed("3");
+            assert_eq!(list.complete_for(&"b".into()), Some(expected));
         }
 
         #[test]
         fn only_complete_the_remainder() {
-            let basic = Basic::new(&["abcd", "abc"]);
-            let expected = "d";
-            assert_eq!(basic.complete_for(&Mock::from("abc")), Some(expected));
+            let list = ["abcd", "abc"];
+            let expected = Cow::Borrowed("d");
+            assert_eq!(list.complete_for(&"abc".into()), Some(expected));
         }
 
         #[test]
         fn always_suggest() {
-            let basic = Basic::new(&["a", "b", "c"]);
+            let list = ["a", "b", "c"];
             let expected = vec!["a", "b", "c"];
-            assert_eq!(&basic.suggest_for(&Mock::empty()), &expected);
-            assert_eq!(&basic.suggest_for(&Mock::from("a")), &expected);
-            assert_eq!(&basic.suggest_for(&Mock::from("z")), &expected);
+            assert_eq!(&list.suggest_for(&Buffer::new()), &expected);
+            assert_eq!(&list.suggest_for(&"a".into()), &expected);
+            assert_eq!(&list.suggest_for(&"z".into()), &expected);
         }
     }
 
-    mod lambda {
-        use super::super::{Basic, Completer, Context, Lambda, Suggester};
-        use crate::test::mock::Context as Mock;
+    mod closure {
+        use super::super::{Buffer, Completer, Suggester};
+        use std::borrow::Cow;
 
         #[test]
-        fn lambdas_can_bu_used_for_both_completions() {
-            let lambda = Lambda::from(|_: &dyn Context| None);
-            assert_eq!(lambda.complete_for(&Mock::empty()), None);
+        fn can_be_used_for_both_completions() {
+            let closure = |_: &Buffer| None;
+            assert_eq!(closure.complete_for(&Buffer::new()), None);
 
-            let lambda = Lambda::from(|_: &dyn Context| vec![]);
-            assert!(lambda.suggest_for(&Mock::empty()).is_empty());
+            let closure = |_: &Buffer| vec![];
+            assert!(closure.suggest_for(&Buffer::new()).is_empty());
         }
 
         #[test]
-        fn basic_lambda_completer() {
-            let basic = Basic::new(&["zz", "b3", "b2"]);
-            let lambda = Lambda::from(|c: &dyn Context| basic.complete_for(c));
-            let expected = "3";
-            assert_eq!(lambda.complete_for(&Mock::from("b")), Some(expected));
+        fn from_list_completer() {
+            let list = ["zz", "b3", "b2"];
+            let closure = |b: &Buffer| list.complete_for(b);
+            let expected = Cow::Borrowed("3");
+            assert_eq!(closure.complete_for(&"b".into()), Some(expected));
         }
 
         #[test]
-        fn basic_lambda_suggester() {
-            let basic = Basic::new(&["a", "b", "c"]);
-            let lambda = Lambda::from(|c: &dyn Context| basic.suggest_for(c));
+        fn from_list_suggester() {
+            let list = ["a", "b", "c"];
+            let closure = |b: &Buffer| list.suggest_for(b);
             let expected = vec!["a", "b", "c"];
-            assert_eq!(&lambda.suggest_for(&Mock::empty()), &expected);
-            assert_eq!(&lambda.suggest_for(&Mock::from("a")), &expected);
-            assert_eq!(&lambda.suggest_for(&Mock::from("z")), &expected);
+            assert_eq!(&closure.suggest_for(&Buffer::new()), &expected);
+            assert_eq!(&closure.suggest_for(&"a".into()), &expected);
+            assert_eq!(&closure.suggest_for(&"z".into()), &expected);
         }
     }
 }
