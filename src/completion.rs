@@ -224,75 +224,41 @@ impl<S: AsRef<str>> Suggester for [S] {
 
 #[cfg(test)]
 mod test {
-    mod list {
-        use super::super::{Buffer, Completer, Suggester};
-        use std::borrow::Cow;
+    use super::{Buffer, Completer, Suggester};
+    use std::borrow::Cow;
 
-        #[test]
-        fn should_not_complete_if_empty() {
-            let list = ["some programmer was here", "some developer was there"];
-            assert_eq!(list.complete_for(&Buffer::new()), None);
-        }
-
-        #[test]
-        fn should_not_complete_if_context_is_different() {
-            let list = ["some programmer was here", "some developer was there"];
-            assert_eq!(list.complete_for(&"a".into()), None);
-        }
-
-        #[test]
-        fn complete_the_first_match() {
-            let list = ["zz", "b3", "b2"];
-            let expected = Cow::Borrowed("3");
-            assert_eq!(list.complete_for(&"b".into()), Some(expected));
-        }
-
-        #[test]
-        fn only_complete_the_remainder() {
-            let list = ["abcd", "abc"];
-            let expected = Cow::Borrowed("d");
-            assert_eq!(list.complete_for(&"abc".into()), Some(expected));
-        }
-
-        #[test]
-        fn always_suggest() {
-            let list = ["a", "b", "c"];
-            let expected = vec!["a", "b", "c"];
-            assert_eq!(&list.suggest_for(&Buffer::new()), &expected);
-            assert_eq!(&list.suggest_for(&"a".into()), &expected);
-            assert_eq!(&list.suggest_for(&"z".into()), &expected);
-        }
+    #[test]
+    fn should_not_complete_if_empty() {
+        let list = ["some programmer was here", "some developer was there"];
+        assert_eq!(list.complete_for(&Buffer::new()), None);
     }
 
-    mod closure {
-        use super::super::{Buffer, Completer, Suggester};
-        use std::borrow::Cow;
+    #[test]
+    fn should_not_complete_if_context_is_different() {
+        let list = ["some programmer was here", "some developer was there"];
+        assert_eq!(list.complete_for(&"a".into()), None);
+    }
 
-        #[test]
-        fn can_be_used_for_both_completions() {
-            let closure = |_: &Buffer| None;
-            assert_eq!(closure.complete_for(&Buffer::new()), None);
+    #[test]
+    fn complete_the_first_match() {
+        let list = ["zz", "b3", "b2"];
+        let expected = Cow::Borrowed("3");
+        assert_eq!(list.complete_for(&"b".into()), Some(expected));
+    }
 
-            let closure = |_: &Buffer| vec![];
-            assert!(closure.suggest_for(&Buffer::new()).is_empty());
-        }
+    #[test]
+    fn only_complete_the_remainder() {
+        let list = ["abcd", "abc"];
+        let expected = Cow::Borrowed("d");
+        assert_eq!(list.complete_for(&"abc".into()), Some(expected));
+    }
 
-        #[test]
-        fn from_list_completer() {
-            let list = ["zz", "b3", "b2"];
-            let closure = |b: &Buffer| list.complete_for(b);
-            let expected = Cow::Borrowed("3");
-            assert_eq!(closure.complete_for(&"b".into()), Some(expected));
-        }
-
-        #[test]
-        fn from_list_suggester() {
-            let list = ["a", "b", "c"];
-            let closure = |b: &Buffer| list.suggest_for(b);
-            let expected = vec!["a", "b", "c"];
-            assert_eq!(&closure.suggest_for(&Buffer::new()), &expected);
-            assert_eq!(&closure.suggest_for(&"a".into()), &expected);
-            assert_eq!(&closure.suggest_for(&"z".into()), &expected);
-        }
+    #[test]
+    fn always_suggest() {
+        let list = ["a", "b", "c"];
+        let expected = vec!["a", "b", "c"];
+        assert_eq!(&list.suggest_for(&Buffer::new()), &expected);
+        assert_eq!(&list.suggest_for(&"a".into()), &expected);
+        assert_eq!(&list.suggest_for(&"z".into()), &expected);
     }
 }

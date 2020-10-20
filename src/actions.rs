@@ -377,8 +377,9 @@ mod test {
 
     #[test]
     fn should_default_if_no_mapping() {
+        use super::KeyBindings;
         use crossterm::event::KeyCode::Tab;
-        let action = action_for::<String>(None, Event::from(Tab), &Buffer::new());
+        let action = action_for::<KeyBindings>(None, Event::from(Tab), &Buffer::new());
         assert_eq!(action, Action::Suggest(Direction::Forward));
     }
 

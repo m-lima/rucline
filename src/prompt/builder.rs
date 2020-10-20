@@ -5,7 +5,7 @@ use crate::buffer::Buffer;
 use crate::completion::{Completer, Suggester};
 use crate::ErrorKind;
 
-macro_rules! boiler_plate {
+macro_rules! impl_builder {
     (base) => {
         fn buffer(mut self, buffer: Buffer) -> Self {
             self.base = self.base.buffer(buffer);
@@ -28,7 +28,7 @@ macro_rules! boiler_plate {
 
         fn overrider_fn<O>(self, overrider: O) -> WithOverrider<O, Self>
         where
-            O: Fn(Event, &Buffer) -> Option<Action>,
+            O: Fn($crate::actions::Event, &Buffer) -> Option<$crate::actions::Action>,
         {
             WithOverrider {
                 base: self,
@@ -229,6 +229,7 @@ pub trait ChainedLineReader {
         S: Suggester + ?Sized;
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Prompt {
     prompt: Option<String>,
     buffer: Option<Buffer>,
@@ -318,7 +319,7 @@ impl Builder for Prompt {
         self
     }
 
-    boiler_plate!(extensions);
+    impl_builder!(extensions);
 
     fn read_line(self) -> Result<Outcome, ErrorKind> {
         super::read_line::<Dummy, Dummy, Dummy>(
@@ -337,8 +338,8 @@ where
     T: Overrider,
     B: Builder,
 {
-    boiler_plate!(base);
-    boiler_plate!(extensions);
+    impl_builder!(base);
+    impl_builder!(extensions);
 
     fn read_line(self) -> Result<Outcome, ErrorKind> {
         self.base
@@ -351,8 +352,8 @@ where
     T: Completer,
     B: Builder,
 {
-    boiler_plate!(base);
-    boiler_plate!(extensions);
+    impl_builder!(base);
+    impl_builder!(extensions);
 
     fn read_line(self) -> Result<Outcome, ErrorKind> {
         self.base
@@ -365,8 +366,8 @@ where
     T: Suggester,
     B: Builder,
 {
-    boiler_plate!(base);
-    boiler_plate!(extensions);
+    impl_builder!(base);
+    impl_builder!(extensions);
 
     fn read_line(self) -> Result<Outcome, ErrorKind> {
         self.base
@@ -379,8 +380,8 @@ where
     T: Overrider + ?Sized,
     B: Builder,
 {
-    boiler_plate!(base);
-    boiler_plate!(extensions);
+    impl_builder!(base);
+    impl_builder!(extensions);
 
     fn read_line(self) -> Result<Outcome, ErrorKind> {
         self.base
@@ -393,8 +394,8 @@ where
     T: Completer + ?Sized,
     B: Builder,
 {
-    boiler_plate!(base);
-    boiler_plate!(extensions);
+    impl_builder!(base);
+    impl_builder!(extensions);
 
     fn read_line(self) -> Result<Outcome, ErrorKind> {
         self.base
@@ -407,8 +408,8 @@ where
     T: Suggester + ?Sized,
     B: Builder,
 {
-    boiler_plate!(base);
-    boiler_plate!(extensions);
+    impl_builder!(base);
+    impl_builder!(extensions);
 
     fn read_line(self) -> Result<Outcome, ErrorKind> {
         self.base
@@ -439,129 +440,153 @@ impl ChainedLineReader for Prompt {
     }
 }
 
-impl<O, B> ChainedLineReader for WithOverrider<O, B>
+impl<T, B> ChainedLineReader for WithOverrider<T, B>
 where
-    O: Overrider,
+    T: Overrider,
     B: Builder,
 {
-    fn chain_read_line<R, C, S>(
+    fn chain_read_line<O, C, S>(
         self,
-        _: Option<&R>,
+        overrider: Option<&O>,
         completer: Option<&C>,
         suggester: Option<&S>,
     ) -> Result<Outcome, ErrorKind>
     where
-        R: Overrider + ?Sized,
+        O: Overrider + ?Sized,
         C: Completer + ?Sized,
         S: Suggester + ?Sized,
     {
-        self.base
-            .chain_read_line(Some(&self.overrider), completer, suggester)
+        if overrider.is_some() {
+            self.base.chain_read_line(overrider, completer, suggester)
+        } else {
+            self.base
+                .chain_read_line(Some(&self.overrider), completer, suggester)
+        }
     }
 }
 
-impl<C, B> ChainedLineReader for WithCompleter<C, B>
+impl<T, B> ChainedLineReader for WithCompleter<T, B>
 where
-    C: Completer,
+    T: Completer,
     B: Builder,
 {
-    fn chain_read_line<O, R, S>(
+    fn chain_read_line<O, C, S>(
         self,
         overrider: Option<&O>,
-        _: Option<&R>,
+        completer: Option<&C>,
         suggester: Option<&S>,
     ) -> Result<Outcome, ErrorKind>
     where
         O: Overrider + ?Sized,
-        R: Completer + ?Sized,
+        C: Completer + ?Sized,
         S: Suggester + ?Sized,
     {
-        self.base
-            .chain_read_line(overrider, Some(&self.completer), suggester)
+        if completer.is_some() {
+            self.base.chain_read_line(overrider, completer, suggester)
+        } else {
+            self.base
+                .chain_read_line(overrider, Some(&self.completer), suggester)
+        }
     }
 }
 
-impl<S, B> ChainedLineReader for WithSuggester<S, B>
+impl<T, B> ChainedLineReader for WithSuggester<T, B>
 where
-    S: Suggester,
+    T: Suggester,
     B: Builder,
 {
-    fn chain_read_line<O, C, R>(
+    fn chain_read_line<O, C, S>(
         self,
         overrider: Option<&O>,
-        completer: Option<&C>,
-        _: Option<&R>,
-    ) -> Result<Outcome, ErrorKind>
-    where
-        O: Overrider + ?Sized,
-        C: Completer + ?Sized,
-        R: Suggester + ?Sized,
-    {
-        self.base
-            .chain_read_line(overrider, completer, Some(&self.suggester))
-    }
-}
-
-impl<O, B> ChainedLineReader for WithRefOverrider<'_, O, B>
-where
-    O: Overrider + ?Sized,
-    B: Builder,
-{
-    fn chain_read_line<R, C, S>(
-        self,
-        _: Option<&R>,
         completer: Option<&C>,
         suggester: Option<&S>,
     ) -> Result<Outcome, ErrorKind>
     where
-        R: Overrider + ?Sized,
+        O: Overrider + ?Sized,
         C: Completer + ?Sized,
         S: Suggester + ?Sized,
     {
-        self.base
-            .chain_read_line(Some(self.overrider), completer, suggester)
+        if suggester.is_some() {
+            self.base.chain_read_line(overrider, completer, suggester)
+        } else {
+            self.base
+                .chain_read_line(overrider, completer, Some(&self.suggester))
+        }
     }
 }
 
-impl<C, B> ChainedLineReader for WithRefCompleter<'_, C, B>
+impl<T, B> ChainedLineReader for WithRefOverrider<'_, T, B>
 where
-    C: Completer + ?Sized,
+    T: Overrider + ?Sized,
     B: Builder,
 {
-    fn chain_read_line<O, R, S>(
+    fn chain_read_line<O, C, S>(
         self,
         overrider: Option<&O>,
-        _: Option<&R>,
+        completer: Option<&C>,
         suggester: Option<&S>,
     ) -> Result<Outcome, ErrorKind>
     where
         O: Overrider + ?Sized,
-        R: Completer + ?Sized,
+        C: Completer + ?Sized,
         S: Suggester + ?Sized,
     {
-        self.base
-            .chain_read_line(overrider, Some(self.completer), suggester)
+        if overrider.is_some() {
+            self.base.chain_read_line(overrider, completer, suggester)
+        } else {
+            self.base
+                .chain_read_line(Some(self.overrider), completer, suggester)
+        }
     }
 }
 
-impl<S, B> ChainedLineReader for WithRefSuggester<'_, S, B>
+impl<T, B> ChainedLineReader for WithRefCompleter<'_, T, B>
 where
-    S: Suggester + ?Sized,
+    T: Completer + ?Sized,
     B: Builder,
 {
-    fn chain_read_line<O, C, R>(
+    fn chain_read_line<O, C, S>(
         self,
         overrider: Option<&O>,
         completer: Option<&C>,
-        _: Option<&R>,
+        suggester: Option<&S>,
     ) -> Result<Outcome, ErrorKind>
     where
         O: Overrider + ?Sized,
         C: Completer + ?Sized,
-        R: Suggester + ?Sized,
+        S: Suggester + ?Sized,
     {
-        self.base
-            .chain_read_line(overrider, completer, Some(self.suggester))
+        if completer.is_some() {
+            self.base.chain_read_line(overrider, completer, suggester)
+        } else {
+            self.base
+                .chain_read_line(overrider, Some(self.completer), suggester)
+        }
+    }
+}
+
+impl<T, B> ChainedLineReader for WithRefSuggester<'_, T, B>
+where
+    T: Suggester + ?Sized,
+    B: Builder,
+{
+    fn chain_read_line<O, C, S>(
+        self,
+        overrider: Option<&O>,
+        completer: Option<&C>,
+        suggester: Option<&S>,
+    ) -> Result<Outcome, ErrorKind>
+    where
+        O: Overrider + ?Sized,
+        C: Completer + ?Sized,
+        S: Suggester + ?Sized,
+    {
+        if suggester.is_some() {
+            self.base.chain_read_line(overrider, completer, suggester)
+        } else {
+            self.base
+                .chain_read_line(overrider, completer, Some(self.suggester))
+        }
     }
 }
 
@@ -596,11 +621,7 @@ where
 struct Dummy;
 
 impl Overrider for Dummy {
-    fn override_for(
-        &self,
-        _: crate::actions::Event,
-        _: &crate::Buffer,
-    ) -> Option<crate::actions::Action> {
+    fn override_for(&self, _: crate::actions::Event, _: &Buffer) -> Option<crate::actions::Action> {
         unimplemented!()
     }
 }
@@ -614,5 +635,101 @@ impl Completer for Dummy {
 impl Suggester for Dummy {
     fn suggest_for(&self, _: &Buffer) -> Vec<std::borrow::Cow<'_, str>> {
         unimplemented!()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::{Builder, ChainedLineReader, Prompt};
+
+    #[test]
+    fn accept_decorated_prompt() {
+        use crossterm::style::Colorize;
+
+        let mut prompt = Prompt::from("My prompt".green());
+
+        assert_eq!(
+            prompt.prompt.take().unwrap().len(),
+            format!("{}", "My prompt".green()).len()
+        );
+    }
+
+    #[test]
+    fn last_hook_is_used() {
+        use super::{
+            Action, Buffer, Closure, Completer, Dummy, ErrorKind, Event, Outcome, Overrider,
+            Suggester, WithCompleter, WithOverrider, WithRefCompleter, WithRefOverrider,
+            WithRefSuggester, WithSuggester,
+        };
+        use crossterm::event::KeyCode::Tab;
+
+        struct MockBuilder;
+        impl Builder for MockBuilder {
+            fn buffer(self, _: Buffer) -> Self {
+                unimplemented!()
+            }
+
+            fn erase_after_read(self, _: bool) -> Self {
+                unimplemented!()
+            }
+
+            fn read_line(self) -> Result<Outcome, ErrorKind> {
+                unimplemented!()
+            }
+
+            impl_builder!(extensions);
+        }
+
+        impl ChainedLineReader for MockBuilder {
+            fn chain_read_line<O, C, S>(
+                self,
+                overrider: Option<&O>,
+                completer: Option<&C>,
+                suggester: Option<&S>,
+            ) -> Result<Outcome, ErrorKind>
+            where
+                O: Overrider + ?Sized,
+                C: Completer + ?Sized,
+                S: Suggester + ?Sized,
+            {
+                assert_eq!(
+                    overrider
+                        .unwrap()
+                        .override_for(Event::from(Tab), &Buffer::new())
+                        .unwrap(),
+                    Action::Accept
+                );
+                assert_eq!(
+                    completer.unwrap().complete_for(&Buffer::from("-")).unwrap(),
+                    "expected"
+                );
+                assert_eq!(
+                    suggester.unwrap().suggest_for(&Buffer::from("-"))[0],
+                    "-expected"
+                );
+                Ok(Outcome::Accepted(String::new()))
+            }
+        }
+
+        struct MockOverrider;
+
+        impl Overrider for MockOverrider {
+            fn override_for(&self, _: Event, _: &Buffer) -> Option<Action> {
+                Some(Action::Cancel)
+            }
+        }
+
+        MockBuilder {}
+            .overrider_ref(&MockOverrider)
+            .overrider(MockOverrider)
+            .overrider_fn(|_, _| Some(Action::Accept))
+            .completer_fn(|_| Some("-unexpected"))
+            .completer(vec!["-unexpected"])
+            .completer_ref(&vec!["-expected"])
+            .suggester(vec!["-unexpected"])
+            .suggester_fn(|_| vec!["-unexpected"])
+            .suggester_ref(&vec!["-expected"])
+            .chain_read_line::<Dummy, Dummy, Dummy>(None, None, None)
+            .unwrap();
     }
 }
