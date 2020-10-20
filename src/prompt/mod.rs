@@ -3,16 +3,16 @@
 //! ### Basic usage:
 //!
 //! ```no_run
-//! use rucline::completion::Basic;
-//! use rucline::Prompt;
+//! use rucline::Outcome::Accepted;
+//! use rucline::prompt::{Builder, Prompt};
 //!
-//! if let Ok(Some(string)) = Prompt::from("What's you favorite website? ")
+//! if let Ok(Accepted(string)) = Prompt::from("What's you favorite website? ")
 //!     // Add some tab completions (Optional)
-//!     .suggester(&Basic::new(&[
+//!     .suggester(vec![
 //!         "https://www.rust-lang.org/",
 //!         "https://docs.rs/",
 //!         "https://crates.io/",
-//!     ]))
+//!     ])
 //!     //Block until value is ready
 //!     .read_line()
 //! {
@@ -20,27 +20,10 @@
 //! }
 //! ```
 //!
-//! ## Reusing existing prompt:
-//! The prompt customization allows chaining to make one-line usages more convenient.
-//! This doesn't mean that a new prompt must be re-built everytime, but does mean that the
-//! reference must be updated to the new version.
+//! TODO: Write about the builder here
 //!
-//! ```no_run
-//! use rucline::prompt::Prompt;
-//!
-//! let mut prompt = Prompt::from("First name: ").erase_after_read(true);
-//! let first_name = prompt.read_line().unwrap();
-//!
-//! // Reassign the modified prompt
-//! prompt = prompt.text("Last name: ").erase_after_read(false);
-//! let last_name = prompt.read_line().unwrap();
-//! ```
-//!
-//! [`crossterm`]: https://docs.rs/crossterm/
 //! [`actions`]: ../actions/enum.Action.html
 //! [`completions`]: ../completion/index.html
-//! [`events`]: actions/type.Event.html
-//! [`prompt`]: prompt/index.html
 
 mod builder;
 mod context;
@@ -55,12 +38,8 @@ use crate::completion::{Completer, Suggester};
 
 pub use builder::{Builder, Prompt};
 
-/// The final outcome from reading the line.
-/// TODO: Document more
 pub enum Outcome {
-    /// TODO
     Accepted(String),
-    /// TODO
     Canceled(Buffer),
 }
 
@@ -106,8 +85,8 @@ impl Outcome {
 ///
 /// # Return
 ///
-/// * `Outcome` - `Accepted(String)` containing the user input, or `Canceled(Buffer)` if the
-/// user has cancelled the input, containing the current buffer.
+/// * `Outcome` - Either `Accepted(String)` containing the user input, or `Canceled(Buffer)`
+/// containing the rejected buffer.
 ///
 /// # Errors
 /// * [`ErrorKind`] - If an error occurred while reading the user input.

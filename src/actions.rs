@@ -10,22 +10,20 @@
 //! # Examples
 //!
 //! ```
-//! use rucline::Prompt;
-//! use rucline::actions::{Action, Event, KeyBindings};
-//! use crossterm::event::KeyCode;
+//! use rucline::actions::{Action, Event, KeyBindings, KeyCode};
+//! use rucline::prompt::{Builder, Prompt};
 //!
 //! let mut bindings = KeyBindings::new();
 //! bindings.insert(Event::from(KeyCode::Tab), Action::Write('\t'));
 //!
-//! let prompt = Prompt::new().overrider(&bindings);
+//! let prompt = Prompt::new().overrider(bindings);
 //! ```
 //!
 //! ```
-//! use rucline::Prompt;
-//! use rucline::actions::{Action, Context, Event, KeyBindings};
-//! use crossterm::event::KeyCode;
+//! use rucline::actions::{Action, Event, KeyCode};
+//! use rucline::prompt::{Builder, Prompt};
 //!
-//! let prompt = Prompt::new().overrider(&|e, _: &dyn Context| if e == Event::from(KeyCode::Tab) {
+//! let prompt = Prompt::new().overrider_fn(|e, _| if e == Event::from(KeyCode::Tab) {
 //!     Some(Action::Write('\t'))
 //! } else {
 //!     None
@@ -38,8 +36,7 @@
 //! between [`Event`] and [`Action`] which will override the default behavior.
 //!
 //! ```
-//! use rucline::actions::{Action, Event, KeyBindings};
-//! use crossterm::event::KeyCode;
+//! use rucline::actions::{Action, Event, KeyBindings, KeyCode};
 //!
 //! let mut bindings = KeyBindings::new();
 //! bindings.insert(Event::from(KeyCode::Tab), Action::Write('\t'));
@@ -51,8 +48,7 @@
 //! set as the override.
 //!
 //! ```
-//! use rucline::actions::{Action, Event, KeyBindings};
-//! use crossterm::event::KeyCode;
+//! use rucline::actions::{Action, Event, KeyBindings, KeyCode};
 //!
 //! let mut bindings = KeyBindings::new();
 //! bindings.insert(Event::from(KeyCode::Tab), Action::Noop);
@@ -70,8 +66,7 @@
 //!
 //! ```no_run
 //! # fn default_action(event: rucline::actions::Event) -> rucline::actions::Action {
-//! # use crossterm::event::KeyCode;
-//! # use rucline::actions::{Action::*, Direction::*, Range::*, Scope::* };
+//! # use rucline::actions::{Action::*, Direction::*, KeyCode, Range::*, Scope::* };
 //! # match event.code {
 //! KeyCode::Enter => Accept,
 //! KeyCode::Esc => Cancel,
@@ -124,13 +119,16 @@
 //! [`Action`]: enum.Action.html
 //! [`Noop`]: enum.Action.html#variant.Noop
 
-pub use crate::Buffer;
+use crate::Buffer;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 /// Alias to `crossterm::event::KeyEvent` from [`crossterm`](https://docs.rs/crossterm/)
 pub type Event = crossterm::event::KeyEvent;
+
+/// Alias to `crossterm::event::KeyCode` from [`crossterm`](https://docs.rs/crossterm/)
+pub use crossterm::event::KeyCode;
 
 /// Alias to [`HashMap<Event, Action>`](std::collections::HashMap)
 pub type KeyBindings = std::collections::HashMap<Event, Action>;
@@ -196,16 +194,15 @@ pub enum Direction {
 /// Overrides the behavior for a given [`Event`].
 ///
 /// This trait has a convenience implementation for [`KeyBindings`] and also a conversion
-/// from lambdas.
+/// from closures.
 ///
 /// # Example
 ///
 /// ```
-/// use rucline::Prompt;
-/// use rucline::actions::{Action, Context, Event};
-/// use crossterm::event::KeyCode;
+/// use rucline::actions::{Action, Event, KeyCode};
+/// use rucline::prompt::{Builder, Prompt};
 ///
-/// let prompt = Prompt::new().overrider(&|e, _: &dyn Context| if e == Event::from(KeyCode::Tab) {
+/// let prompt = Prompt::new().overrider_fn(|e, _| if e == Event::from(KeyCode::Tab) {
 ///     Some(Action::Write('\t'))
 /// } else {
 ///     None
@@ -217,15 +214,15 @@ pub enum Direction {
 pub trait Overrider {
     /// Overrides the behavior for the given [`Event`].
     ///
-    /// [`Context`] will contain the current context of the prompt, in case the behavior should
+    /// [`Buffer`] will contain the current context of the prompt, in case the behavior should
     /// be contextual.
     ///
     /// # Arguments
     /// * [`event`] - The incoming event to be processed.
-    /// * [`context`] - The current context in which this event is coming in.
+    /// * [`buffer`] - The current context in which this event is coming in.
     ///
     /// [`Event`]: type.Event.html
-    /// [`Context`]: ../prompt/context/trait.Context.html
+    /// [`Buffer`]: ../buffer/struct.Buffer.html
     fn override_for(&self, event: Event, buffer: &Buffer) -> Option<Action>;
 }
 
@@ -283,7 +280,6 @@ fn complete_if_at_end_else_move(buffer: &Buffer, range: Range) -> Action {
 }
 
 fn default_action(event: Event, buffer: &Buffer) -> Action {
-    use crossterm::event::KeyCode;
     use Action::{Accept, Cancel, Delete, Move, Noop, Suggest, Write};
     use Direction::{Backward, Forward};
     use Range::{Line, Single, Word};
@@ -335,14 +331,14 @@ fn default_action(event: Event, buffer: &Buffer) -> Action {
 
 #[cfg(test)]
 mod test {
-    use super::{action_for, default_action, Action, Buffer, Direction, Event, Range};
+    use super::{action_for, default_action, Action, Buffer, Direction, Event, KeyCode, Range};
 
     #[test]
     fn should_complete_if_at_end() {
-        use crossterm::event::KeyCode::{Char, End, Right};
         use crossterm::event::KeyModifiers;
         use Action::{Complete, Move};
         use Direction::Forward;
+        use KeyCode::{Char, End, Right};
         use Range::{Line, Single, Word};
 
         let mut c = "a".into();
@@ -378,14 +374,15 @@ mod test {
     #[test]
     fn should_default_if_no_mapping() {
         use super::KeyBindings;
-        use crossterm::event::KeyCode::Tab;
+        use KeyCode::Tab;
         let action = action_for::<KeyBindings>(None, Event::from(Tab), &Buffer::new());
         assert_eq!(action, Action::Suggest(Direction::Forward));
     }
 
     mod basic {
-        use super::super::{action_for, Action, Buffer, Direction, Event, KeyBindings};
-        use crossterm::event::KeyCode::Tab;
+        use super::super::{
+            action_for, Action, Buffer, Direction, Event, KeyBindings, KeyCode::Tab,
+        };
 
         #[test]
         fn should_default_if_event_missing_form_mapping() {
@@ -404,8 +401,7 @@ mod test {
     }
 
     mod closure {
-        use super::super::{action_for, Action, Buffer, Direction, Event};
-        use crossterm::event::KeyCode::Tab;
+        use super::super::{action_for, Action, Buffer, Direction, Event, KeyCode::Tab};
 
         #[test]
         fn should_default_if_event_missing_form_mapping() {
