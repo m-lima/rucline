@@ -50,13 +50,20 @@ macro_rules! boiler_plate {
             }
         }
 
-        fn completer_fn<C>(self, completer: C) -> WithCompleter<C, Self>
+        fn completer_fn<'a, F, R>(
+            self,
+            closure: F,
+        ) -> WithCompleter<Closure<'a, F, Option<R>>, Self>
         where
-            C: Fn(&Buffer) -> Option<std::borrow::Cow<'static, str>>,
+            F: Fn(&Buffer) -> Option<R>,
+            R: Into<std::borrow::Cow<'a, str>>,
         {
             WithCompleter {
                 base: self,
-                completer,
+                completer: Closure {
+                    closure,
+                    _phantom: std::marker::PhantomData,
+                },
             }
         }
 
@@ -74,13 +81,17 @@ macro_rules! boiler_plate {
             }
         }
 
-        fn suggester_fn<S>(self, suggester: S) -> WithSuggester<S, Self>
+        fn suggester_fn<'a, F, R>(self, closure: F) -> WithSuggester<Closure<'a, F, Vec<R>>, Self>
         where
-            S: Fn(&Buffer) -> Vec<std::borrow::Cow<'static, str>>,
+            F: Fn(&Buffer) -> Vec<R>,
+            R: Into<std::borrow::Cow<'a, str>>,
         {
             WithSuggester {
                 base: self,
-                suggester,
+                suggester: Closure {
+                    closure,
+                    _phantom: std::marker::PhantomData,
+                },
             }
         }
 
@@ -158,9 +169,10 @@ pub trait Builder: ChainedLineReader + Sized {
     /// * [`completer`] - The new completer
     ///
     /// [`Completer`]: ../completion/trait.Completer.html
-    fn completer_fn<C>(self, completer: C) -> WithCompleter<C, Self>
+    fn completer_fn<'a, F, R>(self, closure: F) -> WithCompleter<Closure<'a, F, Option<R>>, Self>
     where
-        C: Fn(&Buffer) -> Option<std::borrow::Cow<'static, str>>;
+        F: Fn(&Buffer) -> Option<R>,
+        R: Into<std::borrow::Cow<'a, str>>;
 
     /// Sets the in-line completion provider.
     ///
@@ -187,9 +199,10 @@ pub trait Builder: ChainedLineReader + Sized {
     /// * [`suggester`] - The new suggester
     ///
     /// [`Suggester`]: ../completion/trait.Suggester.html
-    fn suggester_fn<S>(self, suggester: S) -> WithSuggester<S, Self>
+    fn suggester_fn<'a, F, R>(self, closure: F) -> WithSuggester<Closure<'a, F, Vec<R>>, Self>
     where
-        S: Fn(&Buffer) -> Vec<std::borrow::Cow<'static, str>>;
+        F: Fn(&Buffer) -> Vec<R>,
+        R: Into<std::borrow::Cow<'a, str>>;
 
     /// Sets the drop-down suggestion provider.
     ///
@@ -549,6 +562,34 @@ where
     {
         self.base
             .chain_read_line(overrider, completer, Some(self.suggester))
+    }
+}
+
+pub struct Closure<'a, F, R>
+where
+    F: Fn(&Buffer) -> R,
+{
+    closure: F,
+    _phantom: std::marker::PhantomData<&'a ()>,
+}
+
+impl<'a, F, R> Completer for Closure<'a, F, Option<R>>
+where
+    F: Fn(&Buffer) -> Option<R>,
+    R: Into<std::borrow::Cow<'a, str>>,
+{
+    fn complete_for(&self, buffer: &Buffer) -> Option<std::borrow::Cow<'_, str>> {
+        (self.closure)(buffer).map(Into::into)
+    }
+}
+
+impl<'a, F, R> Suggester for Closure<'a, F, Vec<R>>
+where
+    F: Fn(&Buffer) -> Vec<R>,
+    R: Into<std::borrow::Cow<'a, str>>,
+{
+    fn suggest_for(&self, buffer: &Buffer) -> Vec<std::borrow::Cow<'_, str>> {
+        (self.closure)(buffer).into_iter().map(Into::into).collect()
     }
 }
 
