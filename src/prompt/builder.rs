@@ -104,14 +104,70 @@ macro_rules! impl_builder {
     };
 }
 
+/// Builder for a line reader, providing methods that allows chaining together parameters for
+/// customizing the behavior of the line reader.
+///
+/// It essentially is a helper for crafting an invocation of [`prompt::read_line`].
+///
+/// # Example
+///
+/// ```no_run
+/// use rucline::prompt::{Builder, Prompt};
+///
+/// let outcome = Prompt::from("Delete file? ")
+///     .completer(vec!["yes", "no"])
+///     .erase_after_read(true)
+///     .read_line();
+/// ```
+///
+/// # Re-using the prompt configuration
+///
+/// The builder is consumed on every method call, including the [`read_line`] method. To re-use a
+/// prompt, it is advisable to create a prompt provider.
+/// For instance:
+///
+/// ```no_run
+/// # fn do_something(r: Result<rucline::Outcome, rucline::ErrorKind>) {}
+/// use rucline::prompt::{Builder, Prompt};
+///
+/// let completions = vec!["some", "completions"];
+/// let suggestions = vec!["some", "suggestions"];
+///
+/// let prompt = |text: &str| Prompt::from(text)
+///     .completer_ref(&completions)
+///     .suggester_ref(&suggestions);
+///
+/// let firstOutcome = prompt("First: ").read_line();
+/// do_something(firstOutcome);
+///
+/// let secondOutcome = prompt("Second: ").read_line();
+/// do_something(secondOutcome);
+/// ```
+///
+/// # Adding multiple hooks of the same kind
+///
+/// Setting two hooks to the same event in the same chain will cause only the last hook to be called.
+/// For instance:
+/// ```no_run
+/// use rucline::prompt::{Builder, Prompt};
+///
+/// let some_completions = vec!["yes", "no"];
+/// let some_other_completions = vec!["ja", "nei"];
+///
+/// let prompt = Prompt::from("Delete file? ")
+///     .completer(some_completions)         // Will be ignored
+///     .completer(some_other_completions);  // Superseeds the previous completer
+/// ```
+///
+/// [`prompt::read_line`]: fn.read_line.html
+/// [`read_line`]: trait.Builder.html#tymethod.read_line.html
 pub trait Builder: ChainedLineReader + Sized {
     /// Prepopulates the prompt input with `buffer`.
     ///
     /// # Arguments
+    /// * [`buffer`] - A buffer to be used when displaying the prompt.
     ///
-    /// * [`buffer`] - A buffer to be used when displaying the prompt
-    ///
-    /// [`Buffer`]: ../buffer/trait.Buffer.html
+    /// [`buffer`]: ../buffer/struct.Buffer.html
     fn buffer(self, buffer: Buffer) -> Self;
 
     /// Controls if the prompt shall be erased after user input.
@@ -122,22 +178,27 @@ pub trait Builder: ChainedLineReader + Sized {
     ///
     /// If set to `true`, the whole prompt and input will be erased. The cursor returns to the
     /// original position as if nothing happened.
+    ///
+    /// # Arguments
+    /// * `erase_after_read` - Whether the prompt shall be erased after user input.
     fn erase_after_read(self, erase_after_read: bool) -> Self;
 
-    /// Modifies the behavior of the prompt by setting a [`Overrider`].
+    /// Modifies the behavior of the prompt by setting an [`Overrider`].
+    ///
+    /// The builder will take ownership of [`overrider`]. To pass in a reference, use
+    /// [`overrider_ref`].
     ///
     /// # Arguments
+    /// * [`overrider`] - The new overrider.
     ///
-    /// * [`overrider`] - The new overrider
-    ///
-    /// [`Overrider`]: ../actions/trait.Overrider.html
+    /// [`overrider`]: ../actions/trait.Overrider.html
+    /// [`overrider_ref`]: trait.Builder.html#tymethod.overrider_ref
     fn overrider<O: Overrider>(self, overrider: O) -> WithOverrider<O, Self>;
 
-    /// Modifies the behavior of the prompt by setting a [`Overrider`] closure.
+    /// Modifies the behavior of the prompt by setting an [`Overrider`] closure.
     ///
     /// # Arguments
-    ///
-    /// * [`overrider`] - The new overrider
+    /// * [`overrider`] - The new overrider.
     ///
     /// [`Overrider`]: ../actions/trait.Overrider.html
     fn overrider_fn<O>(self, overrider: O) -> WithOverrider<O, Self>
@@ -147,26 +208,27 @@ pub trait Builder: ChainedLineReader + Sized {
     /// Modifies the behavior of the prompt by setting a [`Overrider`] reference.
     ///
     /// # Arguments
-    ///
-    /// * [`overrider`] - The new overrider
+    /// * [`overrider`] - The new overrider reference.
     ///
     /// [`Overrider`]: ../actions/trait.Overrider.html
     fn overrider_ref<O: Overrider>(self, overrider: &O) -> WithRefOverrider<'_, O, Self>;
 
     /// Sets the in-line completion provider.
     ///
+    /// The builder will take ownership of [`completer`]. To pass in a reference, use
+    /// [`completer_ref`].
+    ///
     /// # Arguments
+    /// * [`completer`] - The new completer.
     ///
-    /// * [`completer`] - The new completer
-    ///
-    /// [`Completer`]: ../completion/trait.Completer.html
+    /// [`completer`]: ../completion/trait.Completer.html
+    /// [`completer_ref`]: trait.Builder.html#tymethod.completer_ref
     fn completer<C: Completer>(self, completer: C) -> WithCompleter<C, Self>;
 
-    /// Sets the in-line completion provider.
+    /// Sets the in-line completion closure.
     ///
     /// # Arguments
-    ///
-    /// * [`completer`] - The new completer
+    /// * [`completer`] - A closure that provides an optional completion.
     ///
     /// [`Completer`]: ../completion/trait.Completer.html
     fn completer_fn<'a, F, R>(self, closure: F) -> WithCompleter<Closure<'a, F, Option<R>>, Self>
@@ -174,29 +236,30 @@ pub trait Builder: ChainedLineReader + Sized {
         F: Fn(&Buffer) -> Option<R>,
         R: Into<std::borrow::Cow<'a, str>>;
 
-    /// Sets the in-line completion provider.
+    /// Sets the in-line completion provider reference.
     ///
     /// # Arguments
-    ///
-    /// * [`completer`] - The new completer
+    /// * [`completer`] - The new completer referece.
     ///
     /// [`Completer`]: ../completion/trait.Completer.html
     fn completer_ref<C: Completer>(self, completer: &C) -> WithRefCompleter<'_, C, Self>;
 
     /// Sets the drop-down suggestion provider.
     ///
-    /// # Arguments
+    /// The builder will take ownership of [`suggester`]. To pass in a reference, use
+    /// [`suggester_ref`].
     ///
-    /// * [`suggester`] - The new suggester
+    /// # Arguments
+    /// * [`suggester`] - The new suggester.
     ///
     /// [`Suggester`]: ../completion/trait.Suggester.html
+    /// [`suggester_ref`]: trait.Builder.html#tymethod.suggester_ref
     fn suggester<S: Suggester>(self, suggester: S) -> WithSuggester<S, Self>;
 
-    /// Sets the drop-down suggestion provider.
+    /// Sets the drop-down suggestion closure.
     ///
     /// # Arguments
-    ///
-    /// * [`suggester`] - The new suggester
+    /// * [`suggester`] - A closure that provides a list of suggestions.
     ///
     /// [`Suggester`]: ../completion/trait.Suggester.html
     fn suggester_fn<'a, F, R>(self, closure: F) -> WithSuggester<Closure<'a, F, Vec<R>>, Self>
@@ -204,15 +267,23 @@ pub trait Builder: ChainedLineReader + Sized {
         F: Fn(&Buffer) -> Vec<R>,
         R: Into<std::borrow::Cow<'a, str>>;
 
-    /// Sets the drop-down suggestion provider.
+    /// Sets the drop-down suggestion provider reference.
     ///
     /// # Arguments
     ///
-    /// * [`suggester`] - The new suggester
+    /// * [`suggester`] - The new suggester reference.
     ///
     /// [`Suggester`]: ../completion/trait.Suggester.html
     fn suggester_ref<S: Suggester>(self, suggester: &S) -> WithRefSuggester<'_, S, Self>;
 
+    /// Consumes this [`Builder`] to craft an invocation of [`prompt::read_line`].
+    ///
+    /// # Errors
+    /// * [`ErrorKind`] - If an error occurred while reading the user input.
+    ///
+    /// [`Builder`]: trait.Builder.html
+    /// [`prompt::read_line`]: fn.read_line.html
+    /// [`ErrorKind`]: ../enum.ErrorKind.html
     fn read_line(self) -> Result<Outcome, ErrorKind>;
 }
 
@@ -229,6 +300,20 @@ pub trait ChainedLineReader {
         S: Suggester + ?Sized;
 }
 
+/// The base struct for building a line reader prompt.
+///
+/// This is the most basic implementation of a [`Builder`], containing only a prompt text and a buffer.
+/// It can however can be extended by using its [`Builder`] trait implementation. For example:
+///
+/// ```no_run
+/// use rucline::prompt::{Builder, Prompt};
+///
+/// let prompt = Prompt::from("Type name: ")
+///     .buffer("rust".into())
+///     .suggester(vec!["rust", "c", "c++", "go"]);
+/// ```
+///
+/// [`Builder`]: trait.Builder.html
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Prompt {
     prompt: Option<String>,
@@ -237,6 +322,9 @@ pub struct Prompt {
 }
 
 impl Prompt {
+    /// Creates a new [`Prompt`] with no prompt text. Equivalent to calling `Prompt::default()`
+    ///
+    /// [`Prompt`]: struct.Prompt.html
     #[must_use]
     pub fn new() -> Self {
         Self {
