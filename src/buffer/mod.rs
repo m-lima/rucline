@@ -3,19 +3,43 @@ mod navigation;
 use crate::actions::{Direction, Range, Scope};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub enum Error {
-    InvalidIndex,
-}
+pub struct InvalidIndex;
 
-impl std::error::Error for Error {}
+impl std::error::Error for InvalidIndex {}
 
-impl std::fmt::Display for Error {
+impl std::fmt::Display for InvalidIndex {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(fmt, "invalid cursor position")
     }
 }
 
 /// A `String` that also keeps track of its cursor position.
+///
+/// When presenting the context of the line reader to an [`action`] or a [`completion`], the `Buffer`
+/// is used as a read-only view into the line reader's buffer state.
+///
+/// # Basic example:
+/// ```
+/// use rucline::actions::Direction::Backward;
+/// use rucline::actions::Range::Word;
+/// use rucline::actions::Scope::WholeWord;
+/// use rucline::Buffer;
+///
+/// let mut buffer: Buffer = "my new buffer".into();
+/// assert_eq!(buffer.as_str(), "my new buffer");
+/// assert_eq!(buffer.cursor(), "my new buffer".len());
+///
+/// buffer.move_cursor(Word, Backward);
+/// assert_eq!(buffer.as_str(), "my new buffer");
+/// assert_eq!(buffer.cursor(), "my new ".len());
+///
+/// buffer.delete(WholeWord);
+/// assert_eq!(buffer.as_str(), "my new ");
+/// assert_eq!(buffer.cursor(), "my new ".len());
+/// ```
+///
+/// [`action`]: actions/index.html
+/// [`completion`]: completions/index.html
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Buffer {
     string: String,
@@ -29,23 +53,22 @@ impl Buffer {
         Buffer::default()
     }
 
-    /// Creates a new [`Buffer`] from `string` with a preset cursor position.
+    /// Creates a new [`Buffer`] from `string` with a given cursor position.
     ///
     /// This is a short-hand for:
     /// ```no_run
-    /// # use rucline::buffer::{Buffer, Error};
-    /// # fn with_cursor(string: String, cursor: usize) -> Result<(), Error> {
+    /// # use rucline::Buffer;
+    /// # fn with_cursor(string: String, cursor: usize) {
     /// let mut buffer = Buffer::from(string);
-    /// buffer.set_cursor(cursor)
+    /// buffer.set_cursor(cursor);
     /// # }
     /// ```
     ///
     /// # Errors
-    /// * [`Error`] - If the curosr position does not fall into a character boundary.
+    /// * If the curosr position does not fall into a character boundary.
     ///
-    /// [`Error`]: enum.Error.html
     /// [`Buffer`]: struct.Buffer.html
-    pub fn new_with_cursor<S: AsRef<str>>(string: S, cursor: usize) -> Result<Self, Error> {
+    pub fn new_with_cursor<S: AsRef<str>>(string: S, cursor: usize) -> Result<Self, InvalidIndex> {
         let mut buffer = Buffer::from(string);
         buffer.set_cursor(cursor).map(|_| buffer)
     }
@@ -67,16 +90,15 @@ impl Buffer {
     /// Sets the cursor position in the [`buffer`].
     ///
     /// # Errors
-    /// * [`Error`] - If the curosr position does not fall into a character boundary.
+    /// * If the curosr position does not fall into a character boundary.
     ///
-    /// [`Error`]: enum.Error.html
     /// [`buffer`]: struct.Buffer.html
-    pub fn set_cursor(&mut self, cursor: usize) -> Result<(), Error> {
+    pub fn set_cursor(&mut self, cursor: usize) -> Result<(), InvalidIndex> {
         if self.string.is_char_boundary(cursor) {
             self.cursor = cursor;
             Ok(())
         } else {
-            Err(Error::InvalidIndex)
+            Err(InvalidIndex)
         }
     }
 
@@ -97,6 +119,9 @@ impl Buffer {
 
     /// Inserts a single character to the buffer at the cursor position and increments
     /// the cursor by one.
+    ///
+    /// # Arguments
+    /// * `c` - The character to insert.
     #[inline]
     pub fn write(&mut self, c: char) {
         self.string.insert(self.cursor, c);
@@ -105,14 +130,23 @@ impl Buffer {
 
     /// Inserts a string to the buffer at the cursor position and increments
     /// the cursor by the length of `string`.
+    ///
+    /// # Arguments
+    /// * `string` - The string to insert.
     #[inline]
     pub fn write_str(&mut self, string: &str) {
         self.string.insert_str(self.cursor, string);
         self.cursor += string.len();
     }
 
-    /// Inserts a range of a string to the buffer at the cursor position and increments
+    /// Inserts a [`range`] of a string to the buffer at the cursor position and increments
     /// the cursor by the length of the range.
+    ///
+    /// # Arguments
+    /// * `string` - The string to insert.
+    /// * [`range`] - The range from `string` to insert.
+    ///
+    /// [`range`]: actions/enum.Range.html
     #[inline]
     pub fn write_range(&mut self, string: &str, range: Range) {
         match range {
@@ -129,8 +163,13 @@ impl Buffer {
         }
     }
 
-    /// Deletes the given [`scope`](../../actions/enum.Scope.html) from this buffer
-    /// and updates the cursor accordingly.
+    /// Deletes the given [`scope`] from this buffer and updates the cursor accordingly.
+    ///
+    /// # Arguments
+    /// * [`scope`] - The scope of the deletion.
+    ///
+    /// [`range`]: actions/enum.Range.html
+    /// [`scope`]: actions/enum.Scope.html
     pub fn delete(&mut self, scope: Scope) {
         use Direction::{Backward, Forward};
         use Range::{Line, Single, Word};
@@ -196,7 +235,14 @@ impl Buffer {
         }
     }
 
-    /// Moves the cursor by [`range`](../../actions/enum.Range.html)
+    /// Moves the cursor by [`range`].
+    ///
+    /// # Arguments
+    /// * [`range`] - The range of the movement.
+    /// * [`direction`] - The direction of the movement.
+    ///
+    /// [`range`]: actions/enum.Range.html
+    /// [`direction`]: actions/enum.Direction.html
     pub fn move_cursor(&mut self, range: Range, direction: Direction) {
         use Direction::{Backward, Forward};
         use Range::{Line, Single, Word};

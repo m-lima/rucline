@@ -125,7 +125,7 @@
 //! [`Noop`]: enum.Action.html#variant.Noop
 //! [`Suggest`]: enum.Action.html#variant.Suggest
 //! [`prompt`]: ../prompt/index.html
-//! [`Buffer`]: ../buffer/index.html
+//! [`Buffer`]: ../buffer/struct.Buffer.html
 
 use crate::Buffer;
 

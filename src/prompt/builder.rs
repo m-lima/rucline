@@ -1,8 +1,8 @@
 use super::Outcome;
 
 use crate::actions::{Action, Event, Overrider};
-use crate::buffer::Buffer;
 use crate::completion::{Completer, Suggester};
+use crate::Buffer;
 use crate::ErrorKind;
 
 macro_rules! impl_builder {

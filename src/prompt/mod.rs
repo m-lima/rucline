@@ -38,8 +38,8 @@ use context::Context;
 use writer::Writer;
 
 use crate::actions::{action_for, Action, Direction, Overrider, Range, Scope};
-use crate::buffer::Buffer;
 use crate::completion::{Completer, Suggester};
+use crate::Buffer;
 
 pub use builder::{Builder, Prompt};
 

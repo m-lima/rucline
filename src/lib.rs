@@ -80,8 +80,7 @@
 //! [`Action`]: actions/index.html#default-behavior
 //! [`events`]: actions/type.Event.html
 pub mod actions;
-#[allow(missing_docs)]
-pub mod buffer;
+mod buffer;
 pub mod completion;
 pub mod prompt;
 
@@ -90,3 +89,6 @@ pub use prompt::Outcome;
 
 pub use crossterm;
 pub use crossterm::ErrorKind;
+
+// /// Alias to `crossterm::ErrorKind` from [`crossterm`](https://docs.rs/crossterm/).
+// pub type Error = crossterm::ErrorKind;
