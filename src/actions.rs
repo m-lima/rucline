@@ -1,14 +1,17 @@
-//! Provides mappings and actions to change the behavior of [`Prompt`] when parsing the user input.
+//! Provides mappings and actions to change the behavior of the [`prompt`] when reading user input.
 //!
 //! There is a built-in set of default [`Action`]s that will be executed upon user interaction.
 //! These are meant to feel natural when coming from the default terminal, while also adding further
 //! functionality and editing commands.
 //!
-//! However, bindings that override the default behavior can be given to [`Prompt`] to cause
+//! However, bindings that override the default behavior can be given to the [`prompt`] to cause
 //! a different [`Action`] to be taken.
 //!
 //! # Examples
 //!
+//! Changing the behavior of `TAB` from the default [`Suggest`] action to actually printing `\t`.
+//!
+//! Using [`KeyBindings`]:
 //! ```
 //! use rucline::actions::{Action, Event, KeyBindings, KeyCode};
 //! use rucline::prompt::{Builder, Prompt};
@@ -19,14 +22,17 @@
 //! let prompt = Prompt::new().overrider(bindings);
 //! ```
 //!
+//! Using a closure:
 //! ```
 //! use rucline::actions::{Action, Event, KeyCode};
 //! use rucline::prompt::{Builder, Prompt};
 //!
-//! let prompt = Prompt::new().overrider_fn(|e, _| if e == Event::from(KeyCode::Tab) {
-//!     Some(Action::Write('\t'))
-//! } else {
-//!     None
+//! let prompt = Prompt::new().overrider_fn(|e, _| {
+//!     if e == Event::from(KeyCode::Tab) {
+//!         Some(Action::Write('\t'))
+//!     } else {
+//!         None
+//!     }
 //! });
 //! ```
 //!
@@ -111,23 +117,25 @@
 //! # }}
 //! ```
 //!
-//!  > Check the test cases for `Buffer` to see how the line editor is expected to behave
+//!  > Check the test cases for [`Buffer`] to see how line edits are expected to behave.
 //!
-//! [`Prompt`]: ../prompt/struct.Prompt.html
-//! [`KeyBindings`]: type.KeyBindings.html
-//! [`Event`]: type.Event.html
 //! [`Action`]: enum.Action.html
+//! [`Event`]: type.Event.html
+//! [`KeyBindings`]: type.KeyBindings.html
 //! [`Noop`]: enum.Action.html#variant.Noop
+//! [`Suggest`]: enum.Action.html#variant.Suggest
+//! [`prompt`]: ../prompt/index.html
+//! [`Buffer`]: ../buffer/index.html
 
 use crate::Buffer;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-/// Alias to `crossterm::event::KeyEvent` from [`crossterm`](https://docs.rs/crossterm/)
+/// Alias to `crossterm::event::KeyEvent` from [`crossterm`](https://docs.rs/crossterm/).
 pub type Event = crossterm::event::KeyEvent;
 
-/// Alias to `crossterm::event::KeyCode` from [`crossterm`](https://docs.rs/crossterm/)
+/// Alias to `crossterm::event::KeyCode` from [`crossterm`](https://docs.rs/crossterm/).
 pub use crossterm::event::KeyCode;
 
 /// Alias to [`HashMap<Event, Action>`](std::collections::HashMap)
@@ -185,9 +193,9 @@ pub enum Range {
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Direction {
-    /// Represents a "left" or "down" direction
+    /// Represents a "right" or "down" direction
     Forward,
-    /// Represents a "right" or "up" direction
+    /// Represents a "left" or "up" direction
     Backward,
 }
 
