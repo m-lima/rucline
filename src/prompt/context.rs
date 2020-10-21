@@ -1,6 +1,6 @@
 use super::{Buffer, Completer, Direction, Range, Scope, Suggester, Writer};
 
-use crate::ErrorKind;
+use crate::Error;
 
 pub(super) struct Context<'c, 's, C, S>
 where
@@ -26,7 +26,7 @@ where
         buffer: Option<Buffer>,
         completer: Option<&'c C>,
         suggester: Option<&'s S>,
-    ) -> Result<Self, ErrorKind> {
+    ) -> Result<Self, Error> {
         Ok(Self {
             writer: Writer::new(erase_on_drop, prompt)?,
             buffer: buffer.unwrap_or_else(Buffer::new),
@@ -42,29 +42,25 @@ where
         self.buffer.to_string()
     }
 
-    pub(super) fn print(&mut self) -> Result<(), ErrorKind> {
+    pub(super) fn print(&mut self) -> Result<(), Error> {
         self.writer.print(&self.buffer, self.completion.as_deref())
     }
 
-    pub(super) fn write(&mut self, c: char) -> Result<(), ErrorKind> {
+    pub(super) fn write(&mut self, c: char) -> Result<(), Error> {
         self.try_take_suggestion();
         self.buffer.write(c);
         self.update_completion();
         self.writer.print(&self.buffer, self.completion.as_deref())
     }
 
-    pub(super) fn delete(&mut self, scope: Scope) -> Result<(), ErrorKind> {
+    pub(super) fn delete(&mut self, scope: Scope) -> Result<(), Error> {
         self.try_take_suggestion();
         self.buffer.delete(scope);
         self.update_completion();
         self.writer.print(&self.buffer, self.completion.as_deref())
     }
 
-    pub(super) fn move_cursor(
-        &mut self,
-        range: Range,
-        direction: Direction,
-    ) -> Result<(), ErrorKind> {
+    pub(super) fn move_cursor(&mut self, range: Range, direction: Direction) -> Result<(), Error> {
         self.try_take_suggestion();
         self.buffer.move_cursor(range, direction);
         self.writer.print(&self.buffer, self.completion.as_deref())
@@ -72,7 +68,7 @@ where
 
     // Allowed because using map requires a `self` borrow
     #[allow(clippy::option_if_let_else)]
-    pub(super) fn complete(&mut self, range: Range) -> Result<(), ErrorKind> {
+    pub(super) fn complete(&mut self, range: Range) -> Result<(), Error> {
         self.buffer.go_to_end();
         if let Some(completion) = &self.completion {
             if completion.is_empty() {
@@ -93,7 +89,7 @@ where
         }
     }
 
-    pub(super) fn suggest(&mut self, direction: Direction) -> Result<(), ErrorKind> {
+    pub(super) fn suggest(&mut self, direction: Direction) -> Result<(), Error> {
         if let Some(suggester) = &self.suggester {
             if let Some(suggestions) = &mut self.suggestions {
                 suggestions.cycle(direction);
@@ -121,7 +117,7 @@ where
         self.suggestions.is_some()
     }
 
-    pub(super) fn cancel_suggestion(&mut self) -> Result<(), ErrorKind> {
+    pub(super) fn cancel_suggestion(&mut self) -> Result<(), Error> {
         self.suggestions = None;
         self.writer.print(&self.buffer, self.completion.as_deref())
     }

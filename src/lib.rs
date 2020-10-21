@@ -88,7 +88,6 @@ pub use buffer::Buffer;
 pub use prompt::Outcome;
 
 pub use crossterm;
-pub use crossterm::ErrorKind;
 
-// /// Alias to `crossterm::ErrorKind` from [`crossterm`](https://docs.rs/crossterm/).
-// pub type Error = crossterm::ErrorKind;
+/// Alias to `crossterm::ErrorKind` from [`crossterm`](https://docs.rs/crossterm/).
+pub use crossterm::ErrorKind as Error;

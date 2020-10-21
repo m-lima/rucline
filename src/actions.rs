@@ -133,7 +133,7 @@ use crate::Buffer;
 use serde::{Deserialize, Serialize};
 
 /// Alias to `crossterm::event::KeyEvent` from [`crossterm`](https://docs.rs/crossterm/).
-pub type Event = crossterm::event::KeyEvent;
+pub use crossterm::event::KeyEvent as Event;
 
 /// Alias to `crossterm::event::KeyCode` from [`crossterm`](https://docs.rs/crossterm/).
 pub use crossterm::event::KeyCode;

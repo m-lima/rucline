@@ -3,7 +3,7 @@ use super::Outcome;
 use crate::actions::{Action, Event, Overrider};
 use crate::completion::{Completer, Suggester};
 use crate::Buffer;
-use crate::ErrorKind;
+use crate::Error;
 
 macro_rules! impl_builder {
     (base) => {
@@ -127,7 +127,7 @@ macro_rules! impl_builder {
 /// For instance:
 ///
 /// ```no_run
-/// # fn do_something(r: Result<rucline::Outcome, rucline::ErrorKind>) {}
+/// # fn do_something(r: Result<rucline::Outcome, rucline::Error>) {}
 /// use rucline::prompt::{Builder, Prompt};
 ///
 /// let completions = vec!["some", "completions"];
@@ -279,12 +279,12 @@ pub trait Builder: ChainedLineReader + Sized {
     /// Consumes this [`Builder`] to craft an invocation of [`prompt::read_line`].
     ///
     /// # Errors
-    /// * [`ErrorKind`] - If an error occurred while reading the user input.
+    /// * [`Error`] - If an error occurred while reading the user input.
     ///
     /// [`Builder`]: trait.Builder.html
     /// [`prompt::read_line`]: fn.read_line.html
-    /// [`ErrorKind`]: ../enum.ErrorKind.html
-    fn read_line(self) -> Result<Outcome, ErrorKind>;
+    /// [`Error`]: ../enum.Error.html
+    fn read_line(self) -> Result<Outcome, Error>;
 }
 
 pub trait ChainedLineReader {
@@ -293,7 +293,7 @@ pub trait ChainedLineReader {
         overrider: Option<&O>,
         completer: Option<&C>,
         suggester: Option<&S>,
-    ) -> Result<Outcome, ErrorKind>
+    ) -> Result<Outcome, Error>
     where
         O: Overrider + ?Sized,
         C: Completer + ?Sized,
@@ -418,7 +418,7 @@ impl Builder for Prompt {
 
     impl_builder!(extensions);
 
-    fn read_line(self) -> Result<Outcome, ErrorKind> {
+    fn read_line(self) -> Result<Outcome, Error> {
         super::read_line::<Dummy, Dummy, Dummy>(
             self.prompt.as_deref(),
             self.buffer,
@@ -438,7 +438,7 @@ where
     impl_builder!(base);
     impl_builder!(extensions);
 
-    fn read_line(self) -> Result<Outcome, ErrorKind> {
+    fn read_line(self) -> Result<Outcome, Error> {
         self.base
             .chain_read_line::<T, Dummy, Dummy>(Some(&self.overrider), None, None)
     }
@@ -452,7 +452,7 @@ where
     impl_builder!(base);
     impl_builder!(extensions);
 
-    fn read_line(self) -> Result<Outcome, ErrorKind> {
+    fn read_line(self) -> Result<Outcome, Error> {
         self.base
             .chain_read_line::<Dummy, T, Dummy>(None, Some(&self.completer), None)
     }
@@ -466,7 +466,7 @@ where
     impl_builder!(base);
     impl_builder!(extensions);
 
-    fn read_line(self) -> Result<Outcome, ErrorKind> {
+    fn read_line(self) -> Result<Outcome, Error> {
         self.base
             .chain_read_line::<Dummy, Dummy, T>(None, None, Some(&self.suggester))
     }
@@ -480,7 +480,7 @@ where
     impl_builder!(base);
     impl_builder!(extensions);
 
-    fn read_line(self) -> Result<Outcome, ErrorKind> {
+    fn read_line(self) -> Result<Outcome, Error> {
         self.base
             .chain_read_line::<T, Dummy, Dummy>(Some(self.overrider), None, None)
     }
@@ -494,7 +494,7 @@ where
     impl_builder!(base);
     impl_builder!(extensions);
 
-    fn read_line(self) -> Result<Outcome, ErrorKind> {
+    fn read_line(self) -> Result<Outcome, Error> {
         self.base
             .chain_read_line::<Dummy, T, Dummy>(None, Some(self.completer), None)
     }
@@ -508,7 +508,7 @@ where
     impl_builder!(base);
     impl_builder!(extensions);
 
-    fn read_line(self) -> Result<Outcome, ErrorKind> {
+    fn read_line(self) -> Result<Outcome, Error> {
         self.base
             .chain_read_line::<Dummy, Dummy, T>(None, None, Some(self.suggester))
     }
@@ -520,7 +520,7 @@ impl ChainedLineReader for Prompt {
         overrider: Option<&O>,
         completer: Option<&C>,
         suggester: Option<&S>,
-    ) -> Result<Outcome, ErrorKind>
+    ) -> Result<Outcome, Error>
     where
         O: Overrider + ?Sized,
         C: Completer + ?Sized,
@@ -547,7 +547,7 @@ where
         overrider: Option<&O>,
         completer: Option<&C>,
         suggester: Option<&S>,
-    ) -> Result<Outcome, ErrorKind>
+    ) -> Result<Outcome, Error>
     where
         O: Overrider + ?Sized,
         C: Completer + ?Sized,
@@ -572,7 +572,7 @@ where
         overrider: Option<&O>,
         completer: Option<&C>,
         suggester: Option<&S>,
-    ) -> Result<Outcome, ErrorKind>
+    ) -> Result<Outcome, Error>
     where
         O: Overrider + ?Sized,
         C: Completer + ?Sized,
@@ -597,7 +597,7 @@ where
         overrider: Option<&O>,
         completer: Option<&C>,
         suggester: Option<&S>,
-    ) -> Result<Outcome, ErrorKind>
+    ) -> Result<Outcome, Error>
     where
         O: Overrider + ?Sized,
         C: Completer + ?Sized,
@@ -622,7 +622,7 @@ where
         overrider: Option<&O>,
         completer: Option<&C>,
         suggester: Option<&S>,
-    ) -> Result<Outcome, ErrorKind>
+    ) -> Result<Outcome, Error>
     where
         O: Overrider + ?Sized,
         C: Completer + ?Sized,
@@ -647,7 +647,7 @@ where
         overrider: Option<&O>,
         completer: Option<&C>,
         suggester: Option<&S>,
-    ) -> Result<Outcome, ErrorKind>
+    ) -> Result<Outcome, Error>
     where
         O: Overrider + ?Sized,
         C: Completer + ?Sized,
@@ -672,7 +672,7 @@ where
         overrider: Option<&O>,
         completer: Option<&C>,
         suggester: Option<&S>,
-    ) -> Result<Outcome, ErrorKind>
+    ) -> Result<Outcome, Error>
     where
         O: Overrider + ?Sized,
         C: Completer + ?Sized,
@@ -754,9 +754,9 @@ mod test {
     #[test]
     fn last_hook_is_used() {
         use super::{
-            Action, Buffer, Closure, Completer, Dummy, ErrorKind, Event, Outcome, Overrider,
-            Suggester, WithCompleter, WithOverrider, WithRefCompleter, WithRefOverrider,
-            WithRefSuggester, WithSuggester,
+            Action, Buffer, Closure, Completer, Dummy, Error, Event, Outcome, Overrider, Suggester,
+            WithCompleter, WithOverrider, WithRefCompleter, WithRefOverrider, WithRefSuggester,
+            WithSuggester,
         };
         use crossterm::event::KeyCode::Tab;
 
@@ -770,7 +770,7 @@ mod test {
                 unimplemented!()
             }
 
-            fn read_line(self) -> Result<Outcome, ErrorKind> {
+            fn read_line(self) -> Result<Outcome, Error> {
                 unimplemented!()
             }
 
@@ -783,7 +783,7 @@ mod test {
                 overrider: Option<&O>,
                 completer: Option<&C>,
                 suggester: Option<&S>,
-            ) -> Result<Outcome, ErrorKind>
+            ) -> Result<Outcome, Error>
             where
                 O: Overrider + ?Sized,
                 C: Completer + ?Sized,

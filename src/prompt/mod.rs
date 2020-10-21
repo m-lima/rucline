@@ -136,12 +136,12 @@ impl Outcome {
 /// containing the rejected [`buffer`].
 ///
 /// # Errors
-/// * [`ErrorKind`] - If an error occurred while reading the user input.
+/// * [`Error`] - If an error occurred while reading the user input.
 ///
 /// [`Accepted`]: enum.Outcome.html#variant.Accepted
 /// [`Builder`]: trait.Builder.html
 /// [`Canceled`]: enum.Outcome.html#variant.Canceled
-/// [`ErrorKind`]: ../enum.ErrorKind.html
+/// [`Error`]: ../enum.Error.html
 /// [`Outcome`]: enum.Outcome.html
 /// [`Prompt`]: struct.Prompt.html
 /// [`buffer`]: ../buffer/struct.Buffer.html
@@ -152,7 +152,7 @@ pub fn read_line<O, C, S>(
     overrider: Option<&O>,
     completer: Option<&C>,
     suggester: Option<&S>,
-) -> Result<Outcome, crate::ErrorKind>
+) -> Result<Outcome, crate::Error>
 where
     O: Overrider + ?Sized,
     C: Completer + ?Sized,
