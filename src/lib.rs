@@ -78,12 +78,9 @@
 //! }
 //! ```
 //!
-//! [`crossterm`]: https://docs.rs/crossterm/
-//! [`KeyBindings`]: actions/index.html
 //! [`actions`]: actions/enum.Action.html
 //! [`Action`]: actions/index.html#default-behavior
 //! [`events`]: actions/type.Event.html
-//! [`prompt`]: prompt/index.html
 pub mod actions;
 pub mod buffer;
 pub mod completion;
