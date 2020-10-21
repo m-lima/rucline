@@ -92,13 +92,13 @@ impl Outcome {
 ///
 /// [`Prompt`]: struct.Prompt.html
 /// [`ErrorKind`]: ../enum.ErrorKind.html
-pub fn read_line<'o, 'c, 's, O, C, S>(
+pub fn read_line<O, C, S>(
     prompt: Option<&str>,
     buffer: Option<Buffer>,
     erase_after_read: bool,
-    overrider: Option<&'o O>,
-    completer: Option<&'c C>,
-    suggester: Option<&'s S>,
+    overrider: Option<&O>,
+    completer: Option<&C>,
+    suggester: Option<&S>,
 ) -> Result<Outcome, crate::ErrorKind>
 where
     O: Overrider + ?Sized,
