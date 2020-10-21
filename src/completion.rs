@@ -1,7 +1,7 @@
-//! Provides completion methods for [`Prompt`] when reading lines.
+//! Provides completion methods for [`prompt`] when reading lines.
 //!
 //! By default, no completions are performed upon user interaction. However, if a [`Completer`]
-//! or a [`Suggester`] are provided, the [`Prompt`] will query for completions for the current
+//! or a [`Suggester`] are provided, the [`prompt`] will query for completions for the current
 //! state of the line.
 //!
 //! This module also includes a convenience wrapper for lists, allowing quick implementation
@@ -56,18 +56,18 @@
 //! ```
 //!
 //! # See also
-//! * [`Basic`]
-//! * [`Lambda`]
+//! * [`Actions`]
 //!
-//! [`Prompt`]: ../prompt/struct.Prompt.html
+//! [`Actions`]: ../actions/index.html
 //! [`Completer`]: trait.Completer.html
 //! [`Suggester`]: trait.Suggester.html
+//! [`prompt`]: ../prompt/index.html
 
 pub use crate::Buffer;
 
 /// Completes the buffer in-line.
 ///
-/// Whenever the line is edited, e.g. [`Write`] or [`Delete`], the [`Prompt`] will ask the
+/// Whenever the line is edited, e.g. [`Write`] or [`Delete`], the [`prompt`] will ask the
 /// `Completer` for a possible completion to **append** to the current buffer. The implementation
 /// may use the [`Buffer`] to decide which completions are applicable.
 ///
@@ -100,57 +100,64 @@ pub use crate::Buffer;
 /// ```
 ///
 /// # See also
-/// * [`Basic`]
+/// * [`Suggester`]
 ///
-/// [`Complete`]: ../actions/enum.Action.html#variant.Complete
 /// [`Buffer`]: ../buffer/struct.Buffer.html
+/// [`Complete`]: ../actions/enum.Action.html#variant.Complete
 /// [`Delete`]: ../actions/enum.Action.html#variant.Delete
-/// [`Prompt`]: ../prompt/struct.Prompt.html
+/// [`Suggester`]: trait.Suggester.html
 /// [`Write`]: ../actions/enum.Action.html#variant.Write
+/// [`prompt`]: ../prompt/index.html
 pub trait Completer {
-    /// Provides the in-line completion for a given [`Buffer`].
+    /// Provides the in-line completion.
     ///
-    /// Whenever the line is edited, e.g. [`Write`] or [`Delete`], the [`Prompt`] will call
+    /// Whenever the line is edited, e.g. [`Write`] or [`Delete`], the [`prompt`] will call
     /// `complete_for` for a possible completion to **append** to the current buffer.
     ///
     /// # Arguments
-    /// * [`buffer`] - The current context in which this event is coming in.
+    /// * [`buffer`] - Read-only view into the line buffer, providing the context in which this
+    /// event is happening.
     ///
     /// # Return
-    /// * [`Option<Cow<'_, str>>`] - A completion to be rendered. `None` if there are
-    /// no suggestions.
+    /// * A completion to be rendered. `None` if there are no suggestions.
     ///
     /// # See also
     /// * [`Suggester`]
     ///
     /// [`Buffer`]: ../buffer/struct.Buffer.html
-    /// [`Completer`]: trait.Completer.html
+    /// [`Delete`]: ../actions/enum.Action.html#variant.Delete
     /// [`Suggester`]: trait.Suggester.html
+    /// [`Write`]: ../actions/enum.Action.html#variant.Write
+    /// [`prompt`]: ../prompt/index.html
     fn complete_for(&self, buffer: &Buffer) -> Option<std::borrow::Cow<'_, str>>;
 }
 
-/// Generates a list of possible values for the [`Prompt`] buffer, usually associated with the
+/// Generates a list of possible values for the [`prompt`] buffer, usually associated with the
 /// `Tab` key.
 ///
-/// Whenever the [`Suggest`] action is triggered,  the [`Prompt`] will ask the
+/// Whenever the [`Suggest`] action is triggered,  the [`prompt`] will ask the
 /// `Suggester` for a list of values to **replace** to the current buffer.
-/// This list is kept by the [`Prompt`] for cycling back and forth until it is dropped by
-/// either accepting a suggestion or cancelling it. The implementation
+/// This list is kept by the [`prompt`] for cycling back and forth until it is dropped by
+/// either accepting a suggestion or canceling it. The implementation
 /// may use the [`Buffer`] to decide which completions are applicable.
 ///
 /// The buffer is not actually changed until the suggestion is accepted by either a [`Write`], a
 /// [`Delete`], [`Accept`] or a [`Move`], while a suggestion is selected.
 ///
+/// # See also
+/// * [`Completer`]
+///
 /// [`Accept`]: ../actions/enum.Action.html#variant.Accept
 /// [`Buffer`]: ../buffer/struct.Buffer.html
+/// [`Completer`]: trait.Completer.html
 /// [`Delete`]: ../actions/enum.Action.html#variant.Delete
 /// [`Move`]: ../actions/enum.Action.html#variant.Move
-/// [`Prompt`]: ../prompt/struct.Prompt.html
 /// [`Suggest`]: ../actions/enum.Action.html#variant.Suggest
 /// [`Write`]: ../actions/enum.Action.html#variant.Write
+/// [`prompt`]: ../prompt/index.html
 pub trait Suggester {
-    /// Whenever the [`Suggest`] action is triggered,  the [`Prompt`] will ask the
-    /// `Suggester` for a list of values to **replace** to the current buffer.
+    /// Whenever the [`Suggest`] action is triggered, the [`prompt`] will call `suggest_for`
+    /// for a list of values to **replace** to the current buffer.
     ///
     /// # Examples
     ///
@@ -168,17 +175,15 @@ pub trait Suggester {
     /// ```
     ///
     /// # Arguments
-    /// * [`context`] - The current context in which this event is coming in.
+    /// * [`buffer`] - Read-only view into the line buffer, providing the context in which this
+    /// event is happening.
     ///
     /// # Return
-    /// * [`Vec<&str>`] - The suggestions to be rendered as drop-down options. Empty if none.
+    /// * The list of suggestions to be rendered as drop-down options. Empty if none.
     ///
-    /// # See also
-    /// * [`Basic`]
-    ///
-    /// [`Basic`]: struct.Basic.html#implementations
-    /// [`Completer`]: trait.Completer.html
-    /// [`Context`]: ../prompt/context/trait.Context.html
+    /// [`Buffer`]: ../buffer/struct.Buffer.html
+    /// [`Suggest`]: ../actions/enum.Action.html#variant.Suggest
+    /// [`prompt`]: ../prompt/index.html
     fn suggest_for(&self, buffer: &Buffer) -> Vec<std::borrow::Cow<'_, str>>;
 }
 
