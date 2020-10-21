@@ -1,37 +1,35 @@
-use super::{navigation, Buffer, Completer, Direction, Range, Scope, Suggester, Writer};
-use crate::Context;
+use super::{Buffer, Completer, Direction, Range, Scope, Suggester, Writer};
 
-pub(super) struct ContextImpl<'c, 's> {
+use crate::Error;
+
+pub(super) struct Context<'c, 's, C, S>
+where
+    C: Completer + ?Sized,
+    S: Suggester + ?Sized,
+{
     writer: Writer,
     buffer: Buffer,
-    completer: Option<&'c dyn Completer>,
-    completion: Option<&'c str>,
-    suggester: Option<&'s dyn Suggester>,
+    completer: Option<&'c C>,
+    completion: Option<std::borrow::Cow<'c, str>>,
+    suggester: Option<&'s S>,
     suggestions: Option<Suggestions<'s>>,
 }
 
-impl Context for ContextImpl<'_, '_> {
-    #[inline]
-    fn buffer(&self) -> &str {
-        &self.buffer
-    }
-
-    #[inline]
-    fn cursor(&self) -> usize {
-        self.buffer.cursor()
-    }
-}
-
-impl<'c, 's> ContextImpl<'c, 's> {
+impl<'c, 's, C, S> Context<'c, 's, C, S>
+where
+    C: Completer + ?Sized,
+    S: Suggester + ?Sized,
+{
     pub(super) fn new(
         erase_on_drop: bool,
         prompt: Option<&str>,
-        completer: Option<&'c dyn Completer>,
-        suggester: Option<&'s dyn Suggester>,
-    ) -> Result<Self, crate::ErrorKind> {
+        buffer: Option<Buffer>,
+        completer: Option<&'c C>,
+        suggester: Option<&'s S>,
+    ) -> Result<Self, Error> {
         Ok(Self {
             writer: Writer::new(erase_on_drop, prompt)?,
-            buffer: Buffer::new(),
+            buffer: buffer.unwrap_or_else(Buffer::new),
             completer,
             completion: None,
             suggester,
@@ -44,58 +42,41 @@ impl<'c, 's> ContextImpl<'c, 's> {
         self.buffer.to_string()
     }
 
-    pub(super) fn print(&mut self) -> Result<(), crate::ErrorKind> {
-        self.writer.print(&self.buffer, self.completion)
+    pub(super) fn print(&mut self) -> Result<(), Error> {
+        self.writer.print(&self.buffer, self.completion.as_deref())
     }
 
-    pub(super) fn write(&mut self, c: char) -> Result<(), crate::ErrorKind> {
+    pub(super) fn write(&mut self, c: char) -> Result<(), Error> {
         self.try_take_suggestion();
         self.buffer.write(c);
         self.update_completion();
-        self.writer.print(&self.buffer, self.completion)
+        self.writer.print(&self.buffer, self.completion.as_deref())
     }
 
-    pub(super) fn delete(&mut self, scope: Scope) -> Result<(), crate::ErrorKind> {
+    pub(super) fn delete(&mut self, scope: Scope) -> Result<(), Error> {
         self.try_take_suggestion();
         self.buffer.delete(scope);
         self.update_completion();
-        self.writer.print(&self.buffer, self.completion)
+        self.writer.print(&self.buffer, self.completion.as_deref())
     }
 
-    pub(super) fn move_cursor(
-        &mut self,
-        range: Range,
-        direction: Direction,
-    ) -> Result<(), crate::ErrorKind> {
+    pub(super) fn move_cursor(&mut self, range: Range, direction: Direction) -> Result<(), Error> {
         self.try_take_suggestion();
         self.buffer.move_cursor(range, direction);
-        self.writer.print(&self.buffer, self.completion)
+        self.writer.print(&self.buffer, self.completion.as_deref())
     }
 
-    pub(super) fn complete(&mut self, range: Range) -> Result<(), crate::ErrorKind> {
+    // Allowed because using map requires a `self` borrow
+    #[allow(clippy::option_if_let_else)]
+    pub(super) fn complete(&mut self, range: Range) -> Result<(), Error> {
         self.buffer.go_to_end();
         if let Some(completion) = &self.completion {
             if completion.is_empty() {
                 Ok(())
             } else {
-                match range {
-                    Range::Line => {
-                        self.buffer.write_str(completion);
-                        self.update_completion();
-                        self.writer.print(&self.buffer, self.completion)
-                    }
-                    Range::Word => {
-                        let index = navigation::next_word(0, &completion);
-                        self.buffer.write_str(&completion[0..index]);
-                        self.update_completion();
-                        self.writer.print(&self.buffer, self.completion)
-                    }
-                    Range::Single => {
-                        self.buffer.write(completion.chars().next().unwrap());
-                        self.update_completion();
-                        self.writer.print(&self.buffer, self.completion)
-                    }
-                }
+                self.buffer.write_range(&completion, range);
+                self.update_completion();
+                self.writer.print(&self.buffer, self.completion.as_deref())
             }
         } else {
             Ok(())
@@ -104,24 +85,23 @@ impl<'c, 's> ContextImpl<'c, 's> {
 
     fn update_completion(&mut self) {
         if let Some(completer) = self.completer {
-            self.completion = completer.complete_for(self).map(std::convert::Into::into);
+            self.completion = completer.complete_for(self);
         }
     }
 
-    pub(super) fn suggest(&mut self, direction: Direction) -> Result<(), crate::ErrorKind> {
+    pub(super) fn suggest(&mut self, direction: Direction) -> Result<(), Error> {
         if let Some(suggester) = &self.suggester {
             if let Some(suggestions) = &mut self.suggestions {
                 suggestions.cycle(direction);
                 if let Some(index) = suggestions.index {
-                    return self.writer.print_suggestions(index, &suggestions.options);
+                    return self
+                        .writer
+                        .print_suggestions(index, suggestions.options.as_ref());
                 }
             } else {
                 let options = suggester.suggest_for(self);
                 if !options.is_empty() {
-                    self.suggestions = Some(Suggestions::new(
-                        options.into_iter().map(std::convert::Into::into).collect(),
-                        direction,
-                    ));
+                    self.suggestions = Some(Suggestions::new(options, direction));
                     let suggestions = self.suggestions.as_ref().unwrap();
                     return self
                         .writer
@@ -130,16 +110,16 @@ impl<'c, 's> ContextImpl<'c, 's> {
             }
         }
 
-        self.writer.print(&self.buffer, self.completion)
+        self.writer.print(&self.buffer, self.completion.as_deref())
     }
 
     pub(super) fn is_suggesting(&self) -> bool {
         self.suggestions.is_some()
     }
 
-    pub(super) fn cancel_suggestion(&mut self) -> Result<(), crate::ErrorKind> {
+    pub(super) fn cancel_suggestion(&mut self) -> Result<(), Error> {
         self.suggestions = None;
-        self.writer.print(&self.buffer, self.completion)
+        self.writer.print(&self.buffer, self.completion.as_deref())
     }
 
     fn try_take_suggestion(&mut self) {
@@ -149,13 +129,34 @@ impl<'c, 's> ContextImpl<'c, 's> {
     }
 }
 
+impl<C, S> std::convert::Into<Buffer> for Context<'_, '_, C, S>
+where
+    C: Completer + ?Sized,
+    S: Suggester + ?Sized,
+{
+    fn into(self) -> Buffer {
+        self.buffer
+    }
+}
+
+impl<C, S> std::ops::Deref for Context<'_, '_, C, S>
+where
+    C: Completer + ?Sized,
+    S: Suggester + ?Sized,
+{
+    type Target = Buffer;
+    fn deref(&self) -> &Self::Target {
+        &self.buffer
+    }
+}
+
 struct Suggestions<'a> {
     index: Option<usize>,
-    options: Vec<&'a str>,
+    options: Vec<std::borrow::Cow<'a, str>>,
 }
 
 impl<'a> Suggestions<'a> {
-    fn new(options: Vec<&'a str>, direction: Direction) -> Self {
+    fn new(options: Vec<std::borrow::Cow<'a, str>>, direction: Direction) -> Self {
         let index = match direction {
             Direction::Forward => 0,
             Direction::Backward => options.len() - 1,
@@ -185,10 +186,7 @@ impl<'a> Suggestions<'a> {
     }
 
     fn take(mut self) -> Option<Buffer> {
-        if let Some(index) = self.index {
-            Some(Buffer::from(self.options.swap_remove(index)))
-        } else {
-            None
-        }
+        self.index
+            .map(|index| Buffer::from(self.options.swap_remove(index)))
     }
 }

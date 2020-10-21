@@ -9,16 +9,16 @@
 //! ### Basic usage:
 //!
 //! ```no_run
-//! use rucline::completion::Basic;
-//! use rucline::Prompt;
+//! use rucline::Outcome::Accepted;
+//! use rucline::prompt::{Builder, Prompt};
 //!
-//! if let Ok(Some(string)) = Prompt::from("What's you favorite website? ")
+//! if let Ok(Accepted(string)) = Prompt::from("What's you favorite website? ")
 //!     // Add some tab completions (Optional)
-//!     .suggester(&Basic::new(&[
+//!     .suggester(vec![
 //!         "https://www.rust-lang.org/",
 //!         "https://docs.rs/",
 //!         "https://crates.io/",
-//!     ]))
+//!     ])
 //!     //Block until value is ready
 //!     .read_line()
 //! {
@@ -51,24 +51,24 @@
 //! ### Overriding key bindings
 //!
 //! ```no_run
-//! use rucline::{completion::Basic, Prompt};
-//! use rucline::actions::{Action, Event, KeyBindings, Range};
-//! use crossterm::event::KeyCode;
+//! use rucline::Outcome::Accepted;
+//! use rucline::actions::{Action, Event, KeyBindings, KeyCode, Range};
+//! use rucline::prompt::{Builder, Prompt};
 //!
 //! let mut bindings = KeyBindings::new();
 //!
 //! // Accept the full suggestions if `right` is pressed
 //! bindings.insert(Event::from(KeyCode::Right), Action::Complete(Range::Line));
 //!
-//! if let Ok(Some(string)) = Prompt::from("What's you favorite website? ")
+//! if let Ok(Accepted(string)) = Prompt::from("What's you favorite website? ")
 //!     // Add some likely values as completions
-//!     .completer(&Basic::new(&[
+//!     .completer(vec![
 //!         "https://www.rust-lang.org/",
 //!         "https://docs.rs/",
 //!         "https://crates.io/",
-//!     ]))
+//!     ])
 //!     // Set the new key bindings as an override
-//!     .overrider(&bindings)
+//!     .overrider(bindings)
 //!     //Block until value is ready
 //!     .read_line()
 //! {
@@ -76,22 +76,18 @@
 //! }
 //! ```
 //!
-//! [`crossterm`]: https://docs.rs/crossterm/
-//! [`KeyBindings`]: actions/index.html
 //! [`actions`]: actions/enum.Action.html
 //! [`Action`]: actions/index.html#default-behavior
 //! [`events`]: actions/type.Event.html
-//! [`prompt`]: prompt/index.html
 pub mod actions;
+mod buffer;
 pub mod completion;
-pub mod context;
 pub mod prompt;
 
-pub use context::Context;
-pub use prompt::Prompt;
+pub use buffer::Buffer;
+pub use prompt::Outcome;
 
 pub use crossterm;
-pub use crossterm::ErrorKind;
 
-#[cfg(test)]
-pub(crate) mod test;
+/// Alias to `crossterm::ErrorKind` from [`crossterm`](https://docs.rs/crossterm/).
+pub use crossterm::ErrorKind as Error;

@@ -1,65 +1,176 @@
+mod navigation;
+
 use crate::actions::{Direction, Range, Scope};
 
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct InvalidIndex;
+
+impl std::error::Error for InvalidIndex {}
+
+impl std::fmt::Display for InvalidIndex {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(fmt, "invalid cursor position")
+    }
+}
+
 /// A `String` that also keeps track of its cursor position.
-pub(super) struct Buffer {
+///
+/// When presenting the context of the line reader to an [`action`] or a [`completion`], the `Buffer`
+/// is used as a read-only view into the line reader's buffer state.
+///
+/// # Basic example:
+/// ```
+/// use rucline::actions::Direction::Backward;
+/// use rucline::actions::Range::Word;
+/// use rucline::actions::Scope::WholeWord;
+/// use rucline::Buffer;
+///
+/// let mut buffer: Buffer = "my new buffer".into();
+/// assert_eq!(buffer.as_str(), "my new buffer");
+/// assert_eq!(buffer.cursor(), "my new buffer".len());
+///
+/// buffer.move_cursor(Word, Backward);
+/// assert_eq!(buffer.as_str(), "my new buffer");
+/// assert_eq!(buffer.cursor(), "my new ".len());
+///
+/// buffer.delete(WholeWord);
+/// assert_eq!(buffer.as_str(), "my new ");
+/// assert_eq!(buffer.cursor(), "my new ".len());
+/// ```
+///
+/// [`action`]: actions/index.html
+/// [`completion`]: completions/index.html
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct Buffer {
     string: String,
     cursor: usize,
 }
 
-impl Default for Buffer {
-    fn default() -> Self {
-        Self {
-            string: String::new(),
-            cursor: 0,
-        }
-    }
-}
-
 impl Buffer {
     /// Creates an empty buffer.
-    pub(super) fn new() -> Self {
+    #[must_use]
+    pub fn new() -> Self {
         Buffer::default()
+    }
+
+    /// Creates a new [`Buffer`] from `string` with a given cursor position.
+    ///
+    /// This is a short-hand for:
+    /// ```no_run
+    /// # use rucline::Buffer;
+    /// # fn with_cursor(string: String, cursor: usize) {
+    /// let mut buffer = Buffer::from(string);
+    /// buffer.set_cursor(cursor);
+    /// # }
+    /// ```
+    ///
+    /// # Errors
+    /// * If the curosr position does not fall into a character boundary.
+    ///
+    /// [`Buffer`]: struct.Buffer.html
+    pub fn new_with_cursor<S: AsRef<str>>(string: S, cursor: usize) -> Result<Self, InvalidIndex> {
+        let mut buffer = Buffer::from(string);
+        buffer.set_cursor(cursor).map(|_| buffer)
+    }
+
+    /// Returns the current buffer string.
+    #[inline]
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.string
     }
 
     /// Returns the current position of the cursor.
     #[inline]
-    pub(super) fn cursor(&self) -> usize {
+    #[must_use]
+    pub fn cursor(&self) -> usize {
         self.cursor
     }
 
-    /// Puts the cursor at the end of the buffer
+    /// Sets the cursor position in the [`buffer`].
+    ///
+    /// # Errors
+    /// * If the curosr position does not fall into a character boundary.
+    ///
+    /// [`buffer`]: struct.Buffer.html
+    pub fn set_cursor(&mut self, cursor: usize) -> Result<(), InvalidIndex> {
+        if self.string.is_char_boundary(cursor) {
+            self.cursor = cursor;
+            Ok(())
+        } else {
+            Err(InvalidIndex)
+        }
+    }
+
+    /// Puts the cursor at the end of the buffer.
+    ///
     /// This is short-hand for `move_cursor(Range::Line, Direction::Forward)`
     #[inline]
-    pub(super) fn go_to_end(&mut self) {
+    pub fn go_to_end(&mut self) {
         self.cursor = self.string.len();
     }
 
     /// Clears the buffer and sets the cursor back to zero.
     #[inline]
-    pub(super) fn clear(&mut self) {
+    pub fn clear(&mut self) {
         self.string.clear();
         self.cursor = 0;
     }
 
     /// Inserts a single character to the buffer at the cursor position and increments
     /// the cursor by one.
+    ///
+    /// # Arguments
+    /// * `c` - The character to insert.
     #[inline]
-    pub(super) fn write(&mut self, c: char) {
+    pub fn write(&mut self, c: char) {
         self.string.insert(self.cursor, c);
         self.cursor += c.len_utf8();
     }
 
     /// Inserts a string to the buffer at the cursor position and increments
     /// the cursor by the length of `string`.
+    ///
+    /// # Arguments
+    /// * `string` - The string to insert.
     #[inline]
-    pub(super) fn write_str(&mut self, string: &str) {
+    pub fn write_str(&mut self, string: &str) {
         self.string.insert_str(self.cursor, string);
         self.cursor += string.len();
     }
 
-    /// Deletes the given [`scope`](../../actions/enum.Scope.html) from this buffer
-    /// and updates the cursor accordingly.
-    pub(super) fn delete(&mut self, scope: Scope) {
+    /// Inserts a [`range`] of a string to the buffer at the cursor position and increments
+    /// the cursor by the length of the range.
+    ///
+    /// # Arguments
+    /// * `string` - The string to insert.
+    /// * [`range`] - The range from `string` to insert.
+    ///
+    /// [`range`]: actions/enum.Range.html
+    #[inline]
+    pub fn write_range(&mut self, string: &str, range: Range) {
+        match range {
+            Range::Line => {
+                self.write_str(string);
+            }
+            Range::Word => {
+                let index = navigation::next_word(0, &string);
+                self.write_str(&string[0..index]);
+            }
+            Range::Single => {
+                self.write(string.chars().next().unwrap());
+            }
+        }
+    }
+
+    /// Deletes the given [`scope`] from this buffer and updates the cursor accordingly.
+    ///
+    /// # Arguments
+    /// * [`scope`] - The scope of the deletion.
+    ///
+    /// [`range`]: actions/enum.Range.html
+    /// [`scope`]: actions/enum.Scope.html
+    pub fn delete(&mut self, scope: Scope) {
         use Direction::{Backward, Forward};
         use Range::{Line, Single, Word};
         use Scope::{Relative, WholeLine, WholeWord};
@@ -80,12 +191,12 @@ impl Buffer {
                 }
             }
             Relative(Word, Backward) => {
-                let index = super::navigation::previous_word(self.cursor, &self.string);
+                let index = navigation::previous_word(self.cursor, &self.string);
                 self.string.drain(index..self.cursor);
                 self.cursor = index;
             }
             Relative(Word, Forward) => {
-                let index = super::navigation::next_word(self.cursor, &self.string);
+                let index = navigation::next_word(self.cursor, &self.string);
                 self.string.drain(self.cursor..index);
             }
             Relative(Line, Backward) => {
@@ -96,8 +207,8 @@ impl Buffer {
                 self.string.drain(self.cursor..self.string.len());
             }
             WholeWord => {
-                let mut start = super::navigation::previous_word_end(self.cursor, &self.string);
-                let mut end = super::navigation::next_word(self.cursor, &self.string);
+                let mut start = navigation::previous_word_end(self.cursor, &self.string);
+                let mut end = navigation::next_word(self.cursor, &self.string);
 
                 // If not in the start and there is white space at the boundary,
                 // save one white space
@@ -124,23 +235,30 @@ impl Buffer {
         }
     }
 
-    /// Moves the cursor by [`range`](../../actions/enum.Range.html)
-    pub(super) fn move_cursor(&mut self, range: Range, direction: Direction) {
+    /// Moves the cursor by [`range`].
+    ///
+    /// # Arguments
+    /// * [`range`] - The range of the movement.
+    /// * [`direction`] - The direction of the movement.
+    ///
+    /// [`range`]: actions/enum.Range.html
+    /// [`direction`]: actions/enum.Direction.html
+    pub fn move_cursor(&mut self, range: Range, direction: Direction) {
         use Direction::{Backward, Forward};
         use Range::{Line, Single, Word};
 
         match (range, direction) {
             (Single, Backward) => {
-                self.cursor = super::navigation::previous_scalar_value(self.cursor, &self.string);
+                self.cursor = navigation::previous_scalar_value(self.cursor, &self.string);
             }
             (Single, Forward) => {
-                self.cursor = super::navigation::next_scalar_value(self.cursor, &self.string);
+                self.cursor = navigation::next_scalar_value(self.cursor, &self.string);
             }
             (Word, Backward) => {
-                self.cursor = super::navigation::previous_word(self.cursor, &self.string);
+                self.cursor = navigation::previous_word(self.cursor, &self.string);
             }
             (Word, Forward) => {
-                self.cursor = super::navigation::next_word(self.cursor, &self.string);
+                self.cursor = navigation::next_word(self.cursor, &self.string);
             }
             (Line, Backward) => {
                 self.cursor = 0;
@@ -150,6 +268,27 @@ impl Buffer {
                     self.go_to_end();
                 }
             }
+        }
+    }
+}
+
+impl Default for Buffer {
+    fn default() -> Self {
+        Self {
+            string: String::new(),
+            cursor: 0,
+        }
+    }
+}
+
+impl<S> std::convert::From<S> for Buffer
+where
+    S: AsRef<str>,
+{
+    fn from(string: S) -> Self {
+        Self {
+            string: String::from(string.as_ref()),
+            cursor: string.as_ref().len(),
         }
     }
 }
@@ -166,15 +305,6 @@ impl std::ops::Deref for Buffer {
 impl std::fmt::Display for Buffer {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.string.fmt(fmt)
-    }
-}
-
-impl std::convert::From<&str> for Buffer {
-    fn from(string: &str) -> Self {
-        Self {
-            string: String::from(string),
-            cursor: string.len(),
-        }
     }
 }
 

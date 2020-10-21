@@ -1,6 +1,9 @@
 use super::Buffer;
 
+use crate::Error;
+
 // TODO: Keep track of lines
+// TODO: Deal with colors
 pub(super) struct Writer {
     erase_on_drop: Option<usize>,
     printed_length: usize,
@@ -8,7 +11,7 @@ pub(super) struct Writer {
 }
 
 impl Writer {
-    pub(super) fn new(erase_on_drop: bool, prompt: Option<&str>) -> Result<Self, crate::ErrorKind> {
+    pub(super) fn new(erase_on_drop: bool, prompt: Option<&str>) -> Result<Self, Error> {
         crossterm::terminal::enable_raw_mode()?;
         if let Some(prompt) = prompt {
             use std::io::Write;
@@ -31,11 +34,7 @@ impl Writer {
         })
     }
 
-    pub(super) fn print(
-        &mut self,
-        buffer: &Buffer,
-        completion: Option<&str>,
-    ) -> Result<(), crate::ErrorKind> {
+    pub(super) fn print(&mut self, buffer: &Buffer, completion: Option<&str>) -> Result<(), Error> {
         use std::io::Write;
         use unicode_segmentation::UnicodeSegmentation;
 
@@ -67,15 +66,15 @@ impl Writer {
     pub(super) fn print_suggestions(
         &mut self,
         selected_index: usize,
-        suggestions: &[&str],
-    ) -> Result<(), crate::ErrorKind> {
+        suggestions: &[std::borrow::Cow<'_, str>],
+    ) -> Result<(), Error> {
         use std::io::Write;
         use unicode_segmentation::UnicodeSegmentation;
 
         let mut stdout = std::io::stdout();
 
         // Print buffer
-        let buffer = suggestions[selected_index];
+        let buffer = suggestions[selected_index].as_ref();
         clear_from(&mut stdout, self.printed_length - self.cursor_offset)?;
         crossterm::queue!(stdout, crossterm::style::Print(buffer))?;
         self.cursor_offset = 0;
@@ -127,7 +126,7 @@ impl Writer {
     }
 }
 
-fn clear_from(stdout: &mut std::io::Stdout, amount: usize) -> Result<(), crate::ErrorKind> {
+fn clear_from(stdout: &mut std::io::Stdout, amount: usize) -> Result<(), Error> {
     use std::io::Write;
 
     rewind_cursor(stdout, amount)?;
@@ -140,7 +139,7 @@ fn clear_from(stdout: &mut std::io::Stdout, amount: usize) -> Result<(), crate::
 
 // Allowed because we slice `usize` into `u16` chunks
 #[allow(clippy::cast_possible_truncation)]
-fn rewind_cursor(stdout: &mut std::io::Stdout, amount: usize) -> Result<(), crate::ErrorKind> {
+fn rewind_cursor(stdout: &mut std::io::Stdout, amount: usize) -> Result<(), Error> {
     use std::io::Write;
 
     if amount == 0 {
@@ -158,10 +157,7 @@ fn rewind_cursor(stdout: &mut std::io::Stdout, amount: usize) -> Result<(), crat
 
 // Allowed because we slice `usize` into `u16` chunks
 #[allow(clippy::cast_possible_truncation)]
-fn fast_forward_cursor(
-    stdout: &mut std::io::Stdout,
-    amount: usize,
-) -> Result<(), crate::ErrorKind> {
+fn fast_forward_cursor(stdout: &mut std::io::Stdout, amount: usize) -> Result<(), Error> {
     use std::io::Write;
 
     if amount == 0 {

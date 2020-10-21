@@ -21,12 +21,7 @@ pub(super) fn next_word(pivot: usize, string: &str) -> usize {
     } else {
         unicode_segmentation::UnicodeSegmentation::split_word_bound_indices(string)
             .find(|pair| {
-                pair.0 > pivot
-                    && if let Some(c) = pair.1.chars().next() {
-                        !c.is_whitespace()
-                    } else {
-                        true
-                    }
+                pair.0 > pivot && pair.1.chars().next().map_or(true, |c| !c.is_whitespace())
             })
             .map_or(string.len(), |pair| pair.0)
     }
@@ -38,12 +33,7 @@ pub(super) fn previous_word(pivot: usize, string: &str) -> usize {
     } else {
         unicode_segmentation::UnicodeSegmentation::split_word_bound_indices(string)
             .rfind(|pair| {
-                pair.0 < pivot
-                    && if let Some(c) = pair.1.chars().next() {
-                        !c.is_whitespace()
-                    } else {
-                        true
-                    }
+                pair.0 < pivot && pair.1.chars().next().map_or(true, |c| !c.is_whitespace())
             })
             .map_or(0, |pair| pair.0)
     }
@@ -56,11 +46,7 @@ pub(super) fn previous_word_end(pivot: usize, string: &str) -> usize {
         unicode_segmentation::UnicodeSegmentation::split_word_bound_indices(string)
             .rfind(|pair| {
                 pair.0 + pair.1.len() < pivot
-                    && if let Some(c) = pair.1.chars().next() {
-                        !c.is_whitespace()
-                    } else {
-                        true
-                    }
+                    && pair.1.chars().next().map_or(true, |c| !c.is_whitespace())
             })
             .map_or(0, |pair| pair.0 + pair.1.len())
     }

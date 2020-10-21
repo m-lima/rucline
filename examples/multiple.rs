@@ -1,7 +1,6 @@
-use colored::Colorize;
-
-use rucline::completion::Basic;
-use rucline::Prompt;
+use rucline::crossterm::style::Colorize;
+use rucline::prompt::{Builder, Prompt};
+use rucline::{Buffer, Outcome};
 
 fn main() {
     // Simulate a list of acceptable inputs
@@ -17,30 +16,46 @@ fn main() {
         "very quickly almost lightspeed",
     ];
 
-    // Initial prompt
-    if let Ok(Some(command)) = Prompt::from(format!("{}> ", "vai".green()))
-        .erase_after_read(true)
-        .suggester(&Basic::new(&possible_commands))
-        .completer(&Basic::new(&command_history))
-        .read_line()
-    {
-        // Accept command if it exists
-        if possible_commands.contains(&command.as_str()) {
-            // Show the sub-prompt
-            if let Ok(Some(mode)) = Prompt::from(format!(
-                "{}|{}> ",
-                "vai".green(),
-                command.as_str().bright_green()
-            ))
-            .completer(&Basic::new(&mode_history))
+    let mut buffer = Buffer::new();
+
+    loop {
+        // Initial prompt
+        if let Ok(Outcome::Accepted(command)) = Prompt::from(format!("{}> ", "vai".dark_green()))
+            .erase_after_read(true)
+            .buffer(buffer.clone())
+            .suggester_ref(&possible_commands)
+            .completer_ref(&command_history)
             .read_line()
-            {
-                // We will do as commanded
-                println!("Ok! Will {} {}", command, mode);
+        {
+            // Accept command if it exists
+            if possible_commands.contains(&command.as_str()) {
+                // Show the sub-prompt
+                if let Ok(outcome) = Prompt::from(format!(
+                    "{}|{}> ",
+                    "vai".dark_green(),
+                    command.as_str().green()
+                ))
+                .erase_after_read(true)
+                .completer_ref(&mode_history)
+                .read_line()
+                {
+                    match outcome {
+                        Outcome::Accepted(mode) => {
+                            // We will do as commanded
+                            println!("Ok! Will {} {}", command, mode);
+                            break;
+                        }
+                        Outcome::Canceled(_) => {
+                            buffer = command.into();
+                        }
+                    }
+                }
+            } else {
+                // Command not recognized
+                eprintln!("\n{} invalid command", "Error".red());
             }
         } else {
-            // Command not recognized
-            eprintln!("{} invalid command", "Error".red());
+            break;
         }
     }
 }

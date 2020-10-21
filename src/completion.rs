@@ -1,30 +1,31 @@
-//! Provides completion methods for [`Prompt`] when reading lines.
+//! Provides completion methods for [`prompt`] when reading lines.
 //!
 //! By default, no completions are performed upon user interaction. However, if a [`Completer`]
-//! or a [`Suggester`] are provided, the [`Prompt`] will query for completions for the current
+//! or a [`Suggester`] are provided, the [`prompt`] will query for completions for the current
 //! state of the line.
 //!
-//! This module also includes a convenience wrapper for lambdas, allowing quick implementation
-//! of completions with closures.
+//! This module also includes a convenience wrapper for lists, allowing quick implementation
+//! of completions.
 //!
 //! # Examples
 //!
 //! Basic implementation for in-line completion:
 //!
 //! ```no_run
-//! use rucline::completion::{Completer, Context};
+//! use rucline::Buffer;
+//! use rucline::completion::Completer;
+//! use std::borrow::Cow;
 //!
 //! struct Basic(Vec<String>);
 //! impl Completer for Basic {
-//!   fn complete_for(&self, context: &dyn Context) -> Option<&str> {
-//!       let buffer = context.buffer();
+//!   fn complete_for(&self, buffer: &Buffer) -> Option<Cow<'_, str>> {
 //!       if buffer.is_empty() {
 //!           None
 //!       } else {
 //!           self.0
 //!               .iter()
-//!               .find(|completion| completion.starts_with(buffer))
-//!               .map(|completion| &completion[buffer.len()..])
+//!               .find(|completion| completion.starts_with(buffer.as_str()))
+//!               .map(|completion| (&completion[buffer.len()..]).into())
 //!       }
 //!   }
 //! }
@@ -33,355 +34,246 @@
 //! Basic implementation for drop-down suggestions:
 //!
 //! ```no_run
-//! use rucline::completion::{Context, Suggester};
+//! use rucline::Buffer;
+//! use rucline::completion::Suggester;
+//! use std::borrow::Cow;
 //!
 //! struct Basic(Vec<String>);
 //! impl Suggester for Basic {
-//!   fn suggest_for(&self, context: &dyn Context) -> Vec<&str> {
-//!       self.0.iter().map(String::as_str).collect()
+//!   fn suggest_for(&self, buffer: &Buffer) -> Vec<Cow<'_, str>> {
+//!       self.0.iter().map(|suggestion| suggestion.into()).collect()
 //!   }
 //! }
 //! ```
 //!
-//! Basic implementation for drop-down suggestions with lambda:
+//! Basic implementation for drop-down suggestions with list:
 //!
 //! ```no_run
-//! use rucline::completion::{Context, Lambda};
+//! use rucline::completion::Completer;
 //!
-//! let completions = ["abc", "def", "example word", "weird \"˚∆˙\""];
-//! let completer = Lambda::from(|c: &dyn Context| {
-//!    completions
-//!        .iter()
-//!        .filter_map(|s| if s.starts_with(c.buffer()) { Some(*s) } else { None })
-//!        .collect::<Vec<_>>()
-//!});
+//! let completions = vec!["abc", "def", "example word", "weird \"˚∆˙\""];
+//! let completer: &dyn Completer = &completions;
 //! ```
 //!
 //! # See also
-//! * [`Basic`]
-//! * [`Lambda`]
+//! * [`Actions`]
 //!
-//! [`Basic`]: struct.Basic.html
-//! [`Lambda`]: struct.Lambda.html
-//! [`Prompt`]: ../prompt/struct.Prompt.html
+//! [`Actions`]: ../actions/index.html
 //! [`Completer`]: trait.Completer.html
 //! [`Suggester`]: trait.Suggester.html
+//! [`prompt`]: ../prompt/index.html
 
-pub use crate::Context;
+pub use crate::Buffer;
 
 /// Completes the buffer in-line.
 ///
-/// Whenever the line is edited, e.g. [`Write`] or [`Delete`], the [`Prompt`] will ask the
+/// Whenever the line is edited, e.g. [`Write`] or [`Delete`], the [`prompt`] will ask the
 /// `Completer` for a possible completion to **append** to the current buffer. The implementation
-/// may use the [`Context`] to decide which completions are applicable.
+/// may use the [`Buffer`] to decide which completions are applicable.
 ///
-/// The buffer is not actually changed, the completion is only rendered. A [`Complete`] action
-/// must be issued to incorporate the completion into the buffer.
+/// When the `Completer` is invoked, the buffer is not actually changed, the completion is
+/// only rendered. A [`Complete`] action must be issued to incorporate the completion into
+/// the buffer.
 ///
 /// # Example
 ///
 /// Basic implementation:
 ///
 /// ```no_run
-/// use rucline::completion::{Completer, Context};
+/// use rucline::Buffer;
+/// use rucline::completion::Completer;
+/// use std::borrow::Cow;
 ///
 /// struct Basic(Vec<String>);
 /// impl Completer for Basic {
-///   fn complete_for(&self, context: &dyn Context) -> Option<&str> {
-///       let buffer = context.buffer();
+///   fn complete_for(&self, buffer: &Buffer) -> Option<Cow<'_, str>> {
 ///       if buffer.is_empty() {
 ///           None
 ///       } else {
 ///           self.0
 ///               .iter()
-///               .find(|completion| completion.starts_with(buffer))
-///               .map(|completion| &completion[buffer.len()..])
+///               .find(|completion| completion.starts_with(buffer.as_str()))
+///               .map(|completion| (&completion[buffer.len()..]).into())
 ///       }
 ///   }
 /// }
 /// ```
 ///
 /// # See also
-/// * [`Basic`]
+/// * [`Suggester`]
 ///
-/// [`Basic`]: struct.Basic.html#implementations
+/// [`Buffer`]: ../buffer/struct.Buffer.html
 /// [`Complete`]: ../actions/enum.Action.html#variant.Complete
-/// [`Context`]: ../prompt/context/trait.Context.html
 /// [`Delete`]: ../actions/enum.Action.html#variant.Delete
-/// [`Prompt`]: ../prompt/struct.Prompt.html
+/// [`Suggester`]: trait.Suggester.html
 /// [`Write`]: ../actions/enum.Action.html#variant.Write
+/// [`prompt`]: ../prompt/index.html
 pub trait Completer {
-    /// Provides the in-line completion for a given [`Context`].
+    /// Provides the in-line completion.
     ///
-    /// Whenever the line is edited, e.g. [`Write`] or [`Delete`], the [`Prompt`] will call
+    /// Whenever the line is edited, e.g. [`Write`] or [`Delete`], the [`prompt`] will call
     /// `complete_for` for a possible completion to **append** to the current buffer.
     ///
     /// # Arguments
-    /// * [`context`] - The current context in which this event is coming in.
+    /// * [`buffer`] - Read-only view into the line buffer, providing the context in which this
+    /// event is happening.
     ///
     /// # Return
-    /// * [`Option<&str>`] - A completion to be rendered. `None` if there are no suggestions.
+    /// * A completion to be rendered. `None` if there are no suggestions.
     ///
     /// # See also
-    /// * [`Basic`]
+    /// * [`Suggester`]
     ///
-    /// [`Context`]: ../prompt/context/trait.Context.html
-    /// [`Completer`]: trait.Completer.html
-    /// [`Basic`]: struct.Basic.html#implementations
-    fn complete_for(&self, context: &dyn Context) -> Option<&str>;
+    /// [`Buffer`]: ../buffer/struct.Buffer.html
+    /// [`Delete`]: ../actions/enum.Action.html#variant.Delete
+    /// [`Suggester`]: trait.Suggester.html
+    /// [`Write`]: ../actions/enum.Action.html#variant.Write
+    /// [`prompt`]: ../prompt/index.html
+    fn complete_for(&self, buffer: &Buffer) -> Option<std::borrow::Cow<'_, str>>;
 }
 
-/// Generates a list of possible values for the [`Prompt`] buffer, usually associated with the
+/// Generates a list of possible values for the [`prompt`] buffer, usually associated with the
 /// `Tab` key.
 ///
-/// Whenever the [`Suggest`] action is triggered,  the [`Prompt`] will ask the
+/// Whenever the [`Suggest`] action is triggered,  the [`prompt`] will ask the
 /// `Suggester` for a list of values to **replace** to the current buffer.
-/// This list is kept by the [`Prompt`] for cycling back and forth until it is dropped by
-/// either accepting the suggestions or cancelling it. The implementation
-/// may use the [`Context`] to decide which completions are applicable.
+/// This list is kept by the [`prompt`] for cycling back and forth until it is dropped by
+/// either accepting a suggestion or canceling it. The implementation
+/// may use the [`Buffer`] to decide which completions are applicable.
 ///
 /// The buffer is not actually changed until the suggestion is accepted by either a [`Write`], a
 /// [`Delete`], [`Accept`] or a [`Move`], while a suggestion is selected.
 ///
+/// # See also
+/// * [`Completer`]
+///
 /// [`Accept`]: ../actions/enum.Action.html#variant.Accept
-/// [`Context`]: ../prompt/context/trait.Context.html
+/// [`Buffer`]: ../buffer/struct.Buffer.html
+/// [`Completer`]: trait.Completer.html
 /// [`Delete`]: ../actions/enum.Action.html#variant.Delete
 /// [`Move`]: ../actions/enum.Action.html#variant.Move
-/// [`Prompt`]: ../prompt/struct.Prompt.html
 /// [`Suggest`]: ../actions/enum.Action.html#variant.Suggest
 /// [`Write`]: ../actions/enum.Action.html#variant.Write
+/// [`prompt`]: ../prompt/index.html
 pub trait Suggester {
-    /// Whenever the [`Suggest`] action is triggered,  the [`Prompt`] will ask the
-    /// `Suggester` for a list of values to **replace** to the current buffer.
+    /// Whenever the [`Suggest`] action is triggered, the [`prompt`] will call `suggest_for`
+    /// for a list of values to **replace** to the current buffer.
     ///
     /// # Examples
     ///
     /// Basic implementation:
     ///
     /// ```no_run
+    /// # use std::borrow::Cow;
+    /// # use rucline::Buffer;
     /// # struct Basic(Vec<String>);
     /// # impl rucline::completion::Suggester for Basic {
-    ///  fn suggest_for(&self, _: &dyn rucline::Context) -> Vec<&str> {
-    ///     self.0.iter().map(String::as_str).collect()
+    ///  fn suggest_for(&self, _: &Buffer) -> Vec<Cow<'_, str>> {
+    ///     self.0.iter().map(Into::into).collect()
     /// }
     /// # }
     /// ```
     ///
     /// # Arguments
-    /// * [`context`] - The current context in which this event is coming in.
+    /// * [`buffer`] - Read-only view into the line buffer, providing the context in which this
+    /// event is happening.
     ///
     /// # Return
-    /// * [`Vec<&str>`] - The suggestions to be rendered as drop-down options. Empty if none.
+    /// * The list of suggestions to be rendered as drop-down options. Empty if none.
     ///
-    /// # See also
-    /// * [`Basic`]
-    ///
-    /// [`Basic`]: struct.Basic.html#implementations
-    /// [`Completer`]: trait.Completer.html
-    /// [`Context`]: ../prompt/context/trait.Context.html
-    fn suggest_for(&self, context: &dyn Context) -> Vec<&str>;
+    /// [`Buffer`]: ../buffer/struct.Buffer.html
+    /// [`Suggest`]: ../actions/enum.Action.html#variant.Suggest
+    /// [`prompt`]: ../prompt/index.html
+    fn suggest_for(&self, buffer: &Buffer) -> Vec<std::borrow::Cow<'_, str>>;
 }
 
-/// A wrapper that converts a lambda into a [`Completer`] or a [`Suggester`].
-///
-/// The valid signatures for the lambdas are:
-/// * [`Completer`] - `Fn(&dyn Context) -> Option<&str>`
-/// * [`Suggester`] - `Fn(&dyn Context) -> Vec<&str>`
-///
-/// **Note:**
-/// When declaring the lambda, it is necessary to let Rust know of the lifetime of the [`Context`].
-/// So, even if ignoring the argument, the type must be specified for Rust to infer the proper
-/// lifetimes.
-///
-/// # Example
-///
-/// Simple no-op completers:
-///
-/// ```no_run
-/// use rucline::completion::{Context, Lambda};
-/// let inline_completer = Lambda::from(|_: &dyn Context| None);
-/// let dropdown_suggester = Lambda::from(|_: &dyn Context| vec![]);
-/// ```
-///
-/// [`Completer`]: trait.Completer.html
-/// [`Context`]: ../prompt/context/trait.Context.html
-/// [`Suggester`]: trait.Suggester.html
-pub struct Lambda<'a, F, R>
-where
-    F: Fn(&dyn Context) -> R,
-{
-    lambda: F,
-    _phantom: std::marker::PhantomData<&'a ()>,
-}
-
-impl<'a, F> std::convert::From<F> for Lambda<'a, F, Option<&'a str>>
-where
-    F: Fn(&dyn Context) -> Option<&'a str>,
-{
-    fn from(lambda: F) -> Self {
-        Self {
-            lambda,
-            _phantom: std::marker::PhantomData {},
+macro_rules! impl_completion {
+    (completer) => {
+        fn complete_for(&self, buffer: &Buffer) -> Option<std::borrow::Cow<'_, str>> {
+            if buffer.is_empty() {
+                None
+            } else {
+                self.iter().find_map(|completion| {
+                    if completion.as_ref().starts_with(buffer.as_str()) {
+                        Some((completion.as_ref()[buffer.len()..]).into())
+                    } else {
+                        None
+                    }
+                })
+            }
         }
-    }
-}
+    };
 
-impl<'a, F> std::convert::From<F> for Lambda<'a, F, Vec<&'a str>>
-where
-    F: Fn(&dyn Context) -> Vec<&'a str>,
-{
-    fn from(lambda: F) -> Self {
-        Self {
-            lambda,
-            _phantom: std::marker::PhantomData {},
+    (suggester) => {
+        fn suggest_for(&self, _: &Buffer) -> Vec<std::borrow::Cow<'_, str>> {
+            self.iter()
+                .map(|suggestion| suggestion.as_ref().into())
+                .collect()
         }
-    }
+    };
 }
 
-impl<'a, F> Completer for Lambda<'a, F, Option<&'a str>>
-where
-    F: Fn(&dyn Context) -> Option<&'a str>,
-{
-    fn complete_for(&self, context: &dyn Context) -> Option<&str> {
-        (self.lambda)(context)
-    }
+impl<S: AsRef<str>> Completer for Vec<S> {
+    impl_completion!(completer);
 }
 
-impl<'a, F> Suggester for Lambda<'a, F, Vec<&'a str>>
-where
-    F: Fn(&dyn Context) -> Vec<&'a str>,
-{
-    fn suggest_for(&self, context: &dyn Context) -> Vec<&str> {
-        (self.lambda)(context)
-    }
+impl<S: AsRef<str>> Completer for [S] {
+    impl_completion!(completer);
 }
 
-/// A basic implementation of a completion provider serving both as an example and as a useful
-/// simple completer and suggester.
-///
-/// The default behavior for the traits are:
-/// * [`Completer`] - Return all the matches that start with the current [`Context`]
-/// buffer for in-line completions.
-/// * [`Suggester`] - Return all the entries.
-///
-/// [`Completer`]: trait.Completer.html
-/// [`Context`]: ../prompt/context/trait.Context.html
-/// [`Suggester`]: trait.Suggester.html
-pub struct Basic(Vec<String>);
-
-impl Basic {
-    /// Creates a new instance from the list of `options` given.
-    ///
-    /// # Example
-    ///
-    /// ```no_run
-    /// use rucline::completion::Basic;
-    ///
-    /// let basic = Basic::new(&["some programmer was here", "some developer was there"]);
-    /// ```
-    ///
-    /// # Arguments
-    ///
-    /// * `options` - A list of `&str` to serve as options for completion and suggestions.
-    #[must_use]
-    pub fn new(options: &[&str]) -> Self {
-        Self(options.iter().map(|s| String::from(*s)).collect())
-    }
+impl<S: AsRef<str>> Completer for &[S] {
+    impl_completion!(completer);
 }
 
-impl Completer for Basic {
-    // Allowed because it is more readable this way
-    #[allow(clippy::find_map)]
-    fn complete_for(&self, context: &dyn Context) -> Option<&str> {
-        let buffer = context.buffer();
-        if buffer.is_empty() {
-            None
-        } else {
-            self.0
-                .iter()
-                .find(|completion| completion.starts_with(buffer))
-                .map(|completion| &completion[buffer.len()..])
-        }
-    }
+impl<S: AsRef<str>> Suggester for Vec<S> {
+    impl_completion!(suggester);
 }
 
-impl Suggester for Basic {
-    fn suggest_for(&self, _: &dyn Context) -> Vec<&str> {
-        self.0.iter().map(String::as_str).collect()
-    }
+impl<S: AsRef<str>> Suggester for [S] {
+    impl_completion!(suggester);
+}
+
+impl<S: AsRef<str>> Suggester for &[S] {
+    impl_completion!(suggester);
 }
 
 #[cfg(test)]
 mod test {
-    mod basic {
-        use super::super::{Basic, Completer, Suggester};
-        use crate::test::mock::Context as Mock;
+    use super::{Buffer, Completer, Suggester};
+    use std::borrow::Cow;
 
-        #[test]
-        fn should_not_complete_if_empty() {
-            let basic = Basic::new(&["some programmer was here", "some developer was there"]);
-            assert_eq!(basic.complete_for(&Mock::empty()), None);
-        }
-
-        #[test]
-        fn should_not_complete_if_context_is_different() {
-            let basic = Basic::new(&["some programmer was here", "some developer was there"]);
-            assert_eq!(basic.complete_for(&Mock::from("a")), None);
-        }
-
-        #[test]
-        fn complete_the_first_match() {
-            let basic = Basic::new(&["zz", "b3", "b2"]);
-            let expected = "3";
-            assert_eq!(basic.complete_for(&Mock::from("b")), Some(expected));
-        }
-
-        #[test]
-        fn only_complete_the_remainder() {
-            let basic = Basic::new(&["abcd", "abc"]);
-            let expected = "d";
-            assert_eq!(basic.complete_for(&Mock::from("abc")), Some(expected));
-        }
-
-        #[test]
-        fn always_suggest() {
-            let basic = Basic::new(&["a", "b", "c"]);
-            let expected = vec!["a", "b", "c"];
-            assert_eq!(&basic.suggest_for(&Mock::empty()), &expected);
-            assert_eq!(&basic.suggest_for(&Mock::from("a")), &expected);
-            assert_eq!(&basic.suggest_for(&Mock::from("z")), &expected);
-        }
+    #[test]
+    fn should_not_complete_if_empty() {
+        let list = ["some programmer was here", "some developer was there"];
+        assert_eq!(list.complete_for(&Buffer::new()), None);
     }
 
-    mod lambda {
-        use super::super::{Basic, Completer, Context, Lambda, Suggester};
-        use crate::test::mock::Context as Mock;
+    #[test]
+    fn should_not_complete_if_context_is_different() {
+        let list = ["some programmer was here", "some developer was there"];
+        assert_eq!(list.complete_for(&"a".into()), None);
+    }
 
-        #[test]
-        fn lambdas_can_bu_used_for_both_completions() {
-            let lambda = Lambda::from(|_: &dyn Context| None);
-            assert_eq!(lambda.complete_for(&Mock::empty()), None);
+    #[test]
+    fn complete_the_first_match() {
+        let list = ["zz", "b3", "b2"];
+        let expected = Cow::Borrowed("3");
+        assert_eq!(list.complete_for(&"b".into()), Some(expected));
+    }
 
-            let lambda = Lambda::from(|_: &dyn Context| vec![]);
-            assert!(lambda.suggest_for(&Mock::empty()).is_empty());
-        }
+    #[test]
+    fn only_complete_the_remainder() {
+        let list = ["abcd", "abc"];
+        let expected = Cow::Borrowed("d");
+        assert_eq!(list.complete_for(&"abc".into()), Some(expected));
+    }
 
-        #[test]
-        fn basic_lambda_completer() {
-            let basic = Basic::new(&["zz", "b3", "b2"]);
-            let lambda = Lambda::from(|c: &dyn Context| basic.complete_for(c));
-            let expected = "3";
-            assert_eq!(lambda.complete_for(&Mock::from("b")), Some(expected));
-        }
-
-        #[test]
-        fn basic_lambda_suggester() {
-            let basic = Basic::new(&["a", "b", "c"]);
-            let lambda = Lambda::from(|c: &dyn Context| basic.suggest_for(c));
-            let expected = vec!["a", "b", "c"];
-            assert_eq!(&lambda.suggest_for(&Mock::empty()), &expected);
-            assert_eq!(&lambda.suggest_for(&Mock::from("a")), &expected);
-            assert_eq!(&lambda.suggest_for(&Mock::from("z")), &expected);
-        }
+    #[test]
+    fn always_suggest() {
+        let list = ["a", "b", "c"];
+        let expected = vec!["a", "b", "c"];
+        assert_eq!(&list.suggest_for(&Buffer::new()), &expected);
+        assert_eq!(&list.suggest_for(&"a".into()), &expected);
+        assert_eq!(&list.suggest_for(&"z".into()), &expected);
     }
 }

@@ -1,18 +1,23 @@
-//! Provides a prompt for user input that can be customized with [`actions`] and [`completions`].
+//! Provides a method for presenting a prompt for user input that can be customized with [`actions`]
+//! and [`completions`].
+//!
+//! The core functionality of this module is [`read_line`]. Its invocation can be cumbersome due
+//! to required type annotations, therefore this module also provider a [`Builder`] which helps to
+//! craft the invocation to [`read_line`].
 //!
 //! ### Basic usage:
 //!
 //! ```no_run
-//! use rucline::completion::Basic;
-//! use rucline::Prompt;
+//! use rucline::Outcome::Accepted;
+//! use rucline::prompt::{Builder, Prompt};
 //!
-//! if let Ok(Some(string)) = Prompt::from("What's you favorite website? ")
+//! if let Ok(Accepted(string)) = Prompt::from("What's you favorite website? ")
 //!     // Add some tab completions (Optional)
-//!     .suggester(&Basic::new(&[
+//!     .suggester(vec![
 //!         "https://www.rust-lang.org/",
 //!         "https://docs.rs/",
 //!         "https://crates.io/",
-//!     ]))
+//!     ])
 //!     //Block until value is ready
 //!     .read_line()
 //! {
@@ -20,273 +25,166 @@
 //! }
 //! ```
 //!
-//! ## Reusing existing prompt:
-//! The prompt customization allows chaining to make one-line usages more convenient.
-//! This doesn't mean that a new prompt must be re-built everytime, but does mean that the
-//! reference must be updated to the new version.
-//!
-//! ```no_run
-//! use rucline::prompt::Prompt;
-//!
-//! let mut prompt = Prompt::from("First name: ").erase_after_read(true);
-//! let first_name = prompt.read_line().unwrap();
-//!
-//! // Reassign the modified prompt
-//! prompt = prompt.text("Last name: ").erase_after_read(false);
-//! let last_name = prompt.read_line().unwrap();
-//! ```
-//!
-//! [`crossterm`]: https://docs.rs/crossterm/
 //! [`actions`]: ../actions/enum.Action.html
 //! [`completions`]: ../completion/index.html
-//! [`events`]: actions/type.Event.html
-//! [`prompt`]: prompt/index.html
+//! [`read_line`]: fn.read_line.html
+//! [`Builder`]: trait.Builder.html
 
-mod buffer;
+mod builder;
 mod context;
-mod navigation;
 mod writer;
 
-use buffer::Buffer;
-use context::ContextImpl;
+use context::Context;
 use writer::Writer;
 
 use crate::actions::{action_for, Action, Direction, Overrider, Range, Scope};
 use crate::completion::{Completer, Suggester};
+use crate::Buffer;
 
-/// Represents and stores a prompt that shall be presented to the user for input.
+pub use builder::{Builder, Prompt};
+
+/// The outcome of [`read_line`], being either accepted or canceled by the user.
 ///
-/// When built, the prompt will have no customization or completions. Also the default
-/// [`erase_after_read`] is `true`.
-///
-/// [`erase_after_read`]: struct.Prompt.html#method.erase_after_read
-pub struct Prompt<'o, 'c, 's> {
-    erase_after_read: bool,
-    text: Option<String>,
-    overrider: Option<&'o dyn Overrider>,
-    completer: Option<&'c dyn Completer>,
-    suggester: Option<&'s dyn Suggester>,
+/// [`read_line`]: fn.read_line.html
+pub enum Outcome {
+    /// If the user accepts the prompt input, i.e. an [`Accept`] event was emitted. this variant will
+    /// contain the accepted text.
+    ///
+    /// [`Accept`]: ../actions/enum.Action.html#variant.Accept
+    Accepted(String),
+    /// If the user cancels the prompt input, i.e. a [`Cancel`] event was emitted. this variant will
+    /// contain the rejected buffer, with text and cursor position intact from the moment of
+    /// rejection.
+    ///
+    /// [`Cancel`]: ../actions/enum.Action.html#variant.Cancel
+    Canceled(Buffer),
 }
 
-impl<'o, 'c, 's> Prompt<'o, 'c, 's> {
-    /// Creates a new empty prompt, with no prompt text.
+impl Outcome {
+    /// Returns true if the outcome was accepted.
     #[must_use]
-    pub fn new() -> Self {
-        Prompt::default()
+    pub fn was_acceoted(&self) -> bool {
+        matches!(self, Outcome::Accepted(_))
     }
 
-    /// Modifies the prompt text
+    /// Returns accepted text.
     ///
-    /// # Arguments
+    /// # Panics
     ///
-    /// * `string` - The new prompt text
+    /// Panics if the [`Outcome`] is [`Canceled`]
+    ///
+    /// [`Outcome`]: enum.Outcome.html
+    /// [`Canceled`]: enum.Outcome.html#variant.Canceled
     #[must_use]
-    // Allowed because `impl ToString` doesn't necessarily need to consume `string`
-    #[allow(clippy::needless_pass_by_value)]
-    pub fn text(mut self, string: impl ToString) -> Self {
-        self.text = Some(string.to_string());
-        self
+    pub fn unwrap(self) -> String {
+        if let Outcome::Accepted(string) = self {
+            string
+        } else {
+            panic!("called `Outcome::unwrap()` on a `Canceled` value")
+        }
     }
 
-    /// Removes the current prompt text, leaving it empty;
-    #[must_use]
-    pub fn remove_text(mut self) -> Self {
-        self.text = None;
-        self
-    }
-
-    /// Controls if the prompt shall be erased after user input.
-    ///
-    /// If set to `false` (default), after user input, the terminal will receive a new line
-    /// after the prompt text and the user input. Any drop-down completions will be removed,
-    /// however.
-    ///
-    /// If set to `true`, the whole prompt and input will be erased. The cursor returns to the
-    /// original position as if nothing happened.
-    #[must_use]
-    pub fn erase_after_read(mut self, erase_after_read: bool) -> Self {
-        self.erase_after_read = erase_after_read;
-        self
-    }
-
-    /// Modifies the behavior of the prompt by setting a [`Overrider`].
-    ///
-    /// # Arguments
-    ///
-    /// * [`overrider`] - The new overrider
-    ///
-    /// [`Overrider`]: ../actions/trait.Overrider.html
-    #[must_use]
-    pub fn overrider(mut self, overrider: &'o dyn Overrider) -> Self {
-        self.overrider = Some(overrider);
-        self
-    }
-
-    /// Removes the current overrider, returning to the default prompt behavior.
-    #[must_use]
-    pub fn remove_overrider(mut self) -> Self {
-        self.overrider = None;
-        self
-    }
-
-    /// Sets the in-line completion provider.
-    ///
-    /// # Arguments
-    ///
-    /// * [`completer`] - The new completer
-    ///
-    /// [`Completer`]: ../completion/trait.Completer.html
-    #[must_use]
-    pub fn completer(mut self, completer: &'c dyn Completer) -> Self {
-        self.completer = Some(completer);
-        self
-    }
-
-    /// Removes the current in-line completion provider. No in-line completions will be presented.
-    #[must_use]
-    pub fn remove_completer(mut self) -> Self {
-        self.completer = None;
-        self
-    }
-
-    /// Sets the drop-down suggestion provider.
-    ///
-    /// # Arguments
-    ///
-    /// * [`suggester`] - The new suggester
-    ///
-    /// [`Suggester`]: ../completion/trait.Suggester.html
-    #[must_use]
-    pub fn suggester(mut self, suggester: &'s dyn Suggester) -> Self {
-        self.suggester = Some(suggester);
-        self
-    }
-
-    /// Removes the current drop-down suggestion provider. No drop-down suggestions will be
-    /// presented.
-    #[must_use]
-    pub fn remove_suggester(mut self) -> Self {
-        self.suggester = None;
-        self
-    }
-
-    // TODO: Support crossterm async
-    /// Blocks until an input is committed by the user.
-    ///
-    ///
-    /// Analogous to `std::io::stdin().read_line()`, however providing all the customization
-    /// configured in the [`Prompt`].
+    /// Converts this [`Outcome`] into an optional containing the accepted text.
     ///
     /// # Return
+    /// * `Some(String)` - If the [`Outcome`] is [`accepted`].
+    /// * `None` - If the [`Outcome`] is [`canceled`].
     ///
-    /// * `Option<String>` - A string containing the user input, or `None` if the user has
-    /// cancelled the input.
+    /// [`Outcome`]: enum.Outcome.html
+    /// [`accepted`]: enum.Outcome.html#variant.Accepted
+    /// [`canceled`]: enum.Outcome.html#variant.Canceled
+    #[must_use]
+    pub fn some(self) -> Option<String> {
+        match self {
+            Outcome::Accepted(string) => Some(string),
+            Outcome::Canceled(_) => None,
+        }
+    }
+
+    /// Converts this [`Outcome`] into a result containing the accepted text or the canceled buffer.
+    ///
+    /// # Return
+    /// * `Ok(String)` - If the [`Outcome`] is [`accepted`].
+    /// * `Err(Buffer)` - If the [`Outcome`] is [`canceled`].
     ///
     /// # Errors
-    /// * [`ErrorKind`] - If an error occurred while reading the user input.
+    /// * [`Buffer`] - If the user canceled the input.
     ///
-    /// [`Prompt`]: struct.Prompt.html
-    /// [`ErrorKind`]: ../enum.ErrorKind.html
-    pub fn read_line(&self) -> Result<Option<String>, crate::ErrorKind> {
-        let mut context = ContextImpl::new(
-            self.erase_after_read,
-            self.text.as_deref(),
-            self.completer,
-            self.suggester,
-        )?;
+    /// [`Outcome`]: enum.Outcome.html
+    /// [`Buffer`]: ../buffer/struct.Buffer.html
+    /// [`accepted`]: enum.Outcome.html#variant.Accepted
+    /// [`canceled`]: enum.Outcome.html#variant.Canceled
+    pub fn ok(self) -> Result<String, Buffer> {
+        match self {
+            Outcome::Accepted(string) => Ok(string),
+            Outcome::Canceled(buffer) => Err(buffer),
+        }
+    }
+}
 
-        context.print()?;
-        loop {
-            if let crossterm::event::Event::Key(e) = crossterm::event::read()? {
-                match action_for(self.overrider, e, &context) {
-                    Action::Write(c) => context.write(c)?,
-                    Action::Delete(scope) => context.delete(scope)?,
-                    Action::Move(range, direction) => context.move_cursor(range, direction)?,
-                    Action::Complete(range) => context.complete(range)?,
-                    Action::Suggest(direction) => context.suggest(direction)?,
-                    Action::Noop => continue,
-                    Action::Cancel => {
-                        if context.is_suggesting() {
-                            context.cancel_suggestion()?;
-                        } else {
-                            return Ok(None);
-                        }
+// TODO: Support crossterm async
+/// Analogous to `std::io::stdin().read_line()`, however providing all the customization
+/// configured in the passed parameters.
+///
+/// This method will block until an input is committed by the user.
+///
+/// Calling this method directly can be cumbersome, therefore it is recommended to use the helper
+/// [`Prompt`] and [`Builder`] to craft the call.
+///
+/// # Return
+/// * [`Outcome`] - Either [`Accepted`] containing the user input, or [`Canceled`]
+/// containing the rejected [`buffer`].
+///
+/// # Errors
+/// * [`Error`] - If an error occurred while reading the user input.
+///
+/// [`Accepted`]: enum.Outcome.html#variant.Accepted
+/// [`Builder`]: trait.Builder.html
+/// [`Canceled`]: enum.Outcome.html#variant.Canceled
+/// [`Error`]: ../enum.Error.html
+/// [`Outcome`]: enum.Outcome.html
+/// [`Prompt`]: struct.Prompt.html
+/// [`buffer`]: ../buffer/struct.Buffer.html
+pub fn read_line<O, C, S>(
+    prompt: Option<&str>,
+    buffer: Option<Buffer>,
+    erase_after_read: bool,
+    overrider: Option<&O>,
+    completer: Option<&C>,
+    suggester: Option<&S>,
+) -> Result<Outcome, crate::Error>
+where
+    O: Overrider + ?Sized,
+    C: Completer + ?Sized,
+    S: Suggester + ?Sized,
+{
+    let mut context = Context::new(
+        erase_after_read,
+        prompt.as_deref(),
+        buffer,
+        completer,
+        suggester,
+    )?;
+
+    context.print()?;
+    loop {
+        if let crossterm::event::Event::Key(e) = crossterm::event::read()? {
+            match action_for(overrider, e, &context) {
+                Action::Write(c) => context.write(c)?,
+                Action::Delete(scope) => context.delete(scope)?,
+                Action::Move(range, direction) => context.move_cursor(range, direction)?,
+                Action::Complete(range) => context.complete(range)?,
+                Action::Suggest(direction) => context.suggest(direction)?,
+                Action::Noop => continue,
+                Action::Cancel => {
+                    if context.is_suggesting() {
+                        context.cancel_suggestion()?;
+                    } else {
+                        return Ok(Outcome::Canceled(context.into()));
                     }
-                    Action::Accept => return Ok(Some(context.buffer_as_string())),
                 }
+                Action::Accept => return Ok(Outcome::Accepted(context.buffer_as_string())),
             }
         }
-    }
-}
-
-impl Default for Prompt<'_, '_, '_> {
-    fn default() -> Self {
-        Self {
-            erase_after_read: false,
-            text: None,
-            overrider: None,
-            completer: None,
-            suggester: None,
-        }
-    }
-}
-
-impl<S: ToString> std::convert::From<S> for Prompt<'_, '_, '_> {
-    fn from(string: S) -> Self {
-        Self {
-            erase_after_read: false,
-            text: Some(string.to_string()),
-            overrider: None,
-            completer: None,
-            suggester: None,
-        }
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::Prompt;
-
-    #[test]
-    fn can_reuse_prompt() {
-        let mut prompt = Prompt::new().erase_after_read(true);
-        assert!(prompt.erase_after_read);
-
-        prompt = prompt.erase_after_read(false);
-        assert!(!prompt.erase_after_read);
-    }
-
-    #[test]
-    fn accept_decorated_prompt() {
-        use colored::Colorize;
-
-        let mut prompt = Prompt::from("My prompt".green());
-
-        assert_eq!(
-            prompt.text.take().unwrap().len(),
-            format!("{}", "My prompt".green()).len()
-        );
-
-        prompt = prompt.text("My prompt".blue());
-
-        assert_eq!(
-            prompt.text.unwrap().len(),
-            format!("{}", "My prompt".blue()).len()
-        );
-    }
-
-    #[test]
-    fn remove_text() {
-        let mut prompt = Prompt::new();
-        assert!(prompt.text.is_none());
-
-        prompt = prompt.text("Bla");
-        match &prompt.text {
-            Some(text) => assert_eq!(text.to_string(), "Bla"),
-            None => panic!(),
-        };
-
-        prompt = prompt.remove_text();
-        assert!(prompt.text.is_none());
     }
 }
