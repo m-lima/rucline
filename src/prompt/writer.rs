@@ -1,24 +1,20 @@
+//! Provides a trait for displaying the REPL to the user.
 use super::Buffer;
 
 use crate::Error;
 
 // TODO: Keep track of lines
 // TODO: Deal with colors
-pub(super) struct Writer {
+/// Displays the REPL on stdout in Rucline’s default style.
+pub struct RuclineWriter<'a> {
+    prompt: Option<&'a str>,
     erase_on_drop: Option<usize>,
     printed_length: usize,
     cursor_offset: usize,
 }
 
-impl Writer {
-    pub(super) fn new(erase_on_drop: bool, prompt: Option<&str>) -> Result<Self, Error> {
-        crossterm::terminal::enable_raw_mode()?;
-        if let Some(prompt) = prompt {
-            use std::io::Write;
-
-            crossterm::queue!(std::io::stdout(), crossterm::style::Print(prompt))?;
-        }
-
+impl<'a> RuclineWriter<'a> {
+    pub(crate) fn new(erase_on_drop: bool, prompt: Option<&'a str>) -> Self {
         let erase_on_drop = if erase_on_drop {
             prompt
                 .map(|s| unicode_segmentation::UnicodeSegmentation::graphemes(s, true).count())
@@ -27,14 +23,41 @@ impl Writer {
             None
         };
 
-        Ok(Self {
+        Self {
+            prompt,
             erase_on_drop,
             printed_length: 0,
             cursor_offset: 0,
-        })
+        }
+    }
+}
+
+/// Implement this to provide your own display style.
+pub trait Writer {
+    /// Print the prompt, leaving the cursor in position to receive user input.
+    fn begin(&mut self) -> Result<(), Error>;
+    /// Print the user input, followed by the completion (if any).
+    fn print(&mut self, buffer: &Buffer, completion: Option<&str>) -> Result<(), Error>;
+    /// Print the list of suggestions.
+    fn print_suggestions(
+        &mut self,
+        selected_index: usize,
+        suggestions: &[std::borrow::Cow<'_, str>],
+    ) -> Result<(), Error>;
+}
+
+impl<'a> Writer for RuclineWriter<'a> {
+    fn begin(&mut self) -> Result<(), Error> {
+        crossterm::terminal::enable_raw_mode()?;
+        if let Some(prompt) = self.prompt {
+            use std::io::Write;
+
+            crossterm::queue!(std::io::stdout(), crossterm::style::Print(prompt))?;
+        }
+        Ok(())
     }
 
-    pub(super) fn print(&mut self, buffer: &Buffer, completion: Option<&str>) -> Result<(), Error> {
+    fn print(&mut self, buffer: &Buffer, completion: Option<&str>) -> Result<(), Error> {
         use std::io::Write;
         use unicode_segmentation::UnicodeSegmentation;
 
@@ -63,7 +86,7 @@ impl Writer {
         crossterm::execute!(&mut stdout)
     }
 
-    pub(super) fn print_suggestions(
+    fn print_suggestions(
         &mut self,
         selected_index: usize,
         suggestions: &[std::borrow::Cow<'_, str>],
@@ -173,7 +196,7 @@ fn fast_forward_cursor(stdout: &mut std::io::Stdout, amount: usize) -> Result<()
     crossterm::queue!(stdout, crossterm::cursor::MoveRight(remaining as u16))
 }
 
-impl std::ops::Drop for Writer {
+impl<'a> std::ops::Drop for RuclineWriter<'a> {
     // Allowed because this is a drop and the previous construction already managed the get through
     #[allow(unused_must_use)]
     fn drop(&mut self) {

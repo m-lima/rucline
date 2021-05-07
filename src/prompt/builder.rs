@@ -1,4 +1,5 @@
 use super::Outcome;
+use super::{RuclineWriter, Writer};
 
 use crate::actions::{Action, Event, Overrider};
 use crate::completion::{Completer, Suggester};
@@ -315,37 +316,51 @@ pub trait ChainedLineReader {
 ///
 /// [`Builder`]: trait.Builder.html
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct Prompt {
-    prompt: Option<String>,
+pub struct Prompt<W> {
     buffer: Option<Buffer>,
+    writer: Option<W>,
+    prompt: Option<String>,
     erase_after_read: bool,
 }
 
-impl Prompt {
+impl<W: Writer> Prompt<W> {
     /// Creates a new [`Prompt`] with no prompt text. Equivalent to calling `Prompt::default()`
     ///
     /// [`Prompt`]: struct.Prompt.html
     #[must_use]
     pub fn new() -> Self {
         Self {
+            writer: None,
             prompt: None,
-            buffer: None,
             erase_after_read: false,
+            buffer: None,
         }
     }
 }
 
-impl Default for Prompt {
+impl<W: Writer> Default for Prompt<W> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<S: ToString> std::convert::From<S> for Prompt {
+impl<S: ToString> std::convert::From<S> for Prompt<RuclineWriter<'_>> {
     fn from(s: S) -> Self {
         Self {
-            prompt: Some(s.to_string()),
             buffer: None,
+            writer: None,
+            prompt: Some(s.to_string()),
+            erase_after_read: false,
+        }
+    }
+}
+
+impl<W: Writer> std::convert::From<W> for Prompt<W> {
+    fn from(w: W) -> Self {
+        Self {
+            buffer: None,
+            writer: Some(w),
+            prompt: None,
             erase_after_read: false,
         }
     }
@@ -405,7 +420,20 @@ where
     suggester: &'s S,
 }
 
-impl Builder for Prompt {
+impl Builder for Prompt<RuclineWriter<'_>> {
+    fn read_line(self) -> Result<Outcome, Error> {
+        let mut writer = RuclineWriter::new(self.erase_after_read, self.prompt.as_deref());
+        super::read_line::<Dummy, Dummy, Dummy, RuclineWriter<'_>>(
+            self.buffer,
+            None,
+            None,
+            None,
+            &mut writer,
+        )
+    }
+}
+
+impl<W: Writer> Builder for Prompt<W> {
     fn buffer(mut self, buffer: Buffer) -> Self {
         self.buffer = Some(buffer);
         self
@@ -418,14 +446,13 @@ impl Builder for Prompt {
 
     impl_builder!(extensions);
 
-    fn read_line(self) -> Result<Outcome, Error> {
-        super::read_line::<Dummy, Dummy, Dummy>(
-            self.prompt.as_deref(),
+    default fn read_line(self) -> Result<Outcome, Error> {
+        super::read_line::<Dummy, Dummy, Dummy, W>(
             self.buffer,
-            self.erase_after_read,
             None,
             None,
             None,
+            &mut self.writer.unwrap(),
         )
     }
 }
@@ -514,8 +541,8 @@ where
     }
 }
 
-impl ChainedLineReader for Prompt {
-    fn chain_read_line<O, C, S>(
+impl<W: Writer> ChainedLineReader for Prompt<W> {
+    default fn chain_read_line<O, C, S>(
         self,
         overrider: Option<&O>,
         completer: Option<&C>,
@@ -527,12 +554,34 @@ impl ChainedLineReader for Prompt {
         S: Suggester + ?Sized,
     {
         super::read_line(
-            self.prompt.as_deref(),
             self.buffer,
-            self.erase_after_read,
             overrider,
             completer,
             suggester,
+            &mut self.writer.unwrap(),
+        )
+    }
+}
+
+impl ChainedLineReader for Prompt<RuclineWriter<'_>> {
+    default fn chain_read_line<O, C, S>(
+        self,
+        overrider: Option<&O>,
+        completer: Option<&C>,
+        suggester: Option<&S>,
+    ) -> Result<Outcome, Error>
+    where
+        O: Overrider + ?Sized,
+        C: Completer + ?Sized,
+        S: Suggester + ?Sized,
+    {
+        let mut writer = RuclineWriter::new(self.erase_after_read, self.prompt.as_deref());
+        super::read_line(
+            self.buffer,
+            overrider,
+            completer,
+            suggester,
+            &mut writer,
         )
     }
 }
