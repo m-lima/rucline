@@ -2,12 +2,13 @@ use super::{Buffer, Completer, Direction, Range, Scope, Suggester, Writer};
 
 use crate::Error;
 
-pub(super) struct Context<'c, 's, C, S>
+pub(super) struct Context<'c, 's, 'w, C, S, W>
 where
     C: Completer + ?Sized,
     S: Suggester + ?Sized,
+    W: Writer + ?Sized,
 {
-    writer: Writer,
+    writer: &'w mut W,
     buffer: Buffer,
     completer: Option<&'c C>,
     completion: Option<std::borrow::Cow<'c, str>>,
@@ -15,20 +16,21 @@ where
     suggestions: Option<Suggestions<'s>>,
 }
 
-impl<'c, 's, C, S> Context<'c, 's, C, S>
+impl<'c, 's, 'w, C, S, W> Context<'c, 's, 'w, C, S, W>
 where
     C: Completer + ?Sized,
     S: Suggester + ?Sized,
+    W: Writer + ?Sized,
 {
     pub(super) fn new(
-        erase_on_drop: bool,
-        prompt: Option<&str>,
+        writer: &'w mut W,
         buffer: Option<Buffer>,
         completer: Option<&'c C>,
         suggester: Option<&'s S>,
     ) -> Result<Self, Error> {
+        writer.begin()?;
         Ok(Self {
-            writer: Writer::new(erase_on_drop, prompt)?,
+            writer: writer,
             buffer: buffer.unwrap_or_else(Buffer::new),
             completer,
             completion: None,
@@ -129,20 +131,22 @@ where
     }
 }
 
-impl<C, S> std::convert::Into<Buffer> for Context<'_, '_, C, S>
+impl<C, S, W> std::convert::Into<Buffer> for Context<'_, '_, '_, C, S, W>
 where
     C: Completer + ?Sized,
     S: Suggester + ?Sized,
+    W: Writer + ?Sized,
 {
     fn into(self) -> Buffer {
         self.buffer
     }
 }
 
-impl<C, S> std::ops::Deref for Context<'_, '_, C, S>
+impl<C, S, W> std::ops::Deref for Context<'_, '_, '_, C, S, W>
 where
     C: Completer + ?Sized,
     S: Suggester + ?Sized,
+    W: Writer + ?Sized,
 {
     type Target = Buffer;
     fn deref(&self) -> &Self::Target {

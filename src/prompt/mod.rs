@@ -32,10 +32,11 @@
 
 mod builder;
 mod context;
-mod writer;
+
+pub mod writer;
 
 use context::Context;
-use writer::Writer;
+use writer::{RuclineWriter, Writer};
 
 use crate::actions::{action_for, Action, Direction, Overrider, Range, Scope};
 use crate::completion::{Completer, Suggester};
@@ -145,22 +146,21 @@ impl Outcome {
 /// [`Outcome`]: enum.Outcome.html
 /// [`Prompt`]: struct.Prompt.html
 /// [`buffer`]: ../buffer/struct.Buffer.html
-pub fn read_line<O, C, S>(
-    prompt: Option<&str>,
+pub fn read_line<O, C, S, W>(
     buffer: Option<Buffer>,
-    erase_after_read: bool,
     overrider: Option<&O>,
     completer: Option<&C>,
     suggester: Option<&S>,
+    writer: &mut W,
 ) -> Result<Outcome, crate::Error>
 where
     O: Overrider + ?Sized,
     C: Completer + ?Sized,
     S: Suggester + ?Sized,
+    W: Writer + ?Sized,
 {
     let mut context = Context::new(
-        erase_after_read,
-        prompt.as_deref(),
+        writer,
         buffer,
         completer,
         suggester,
