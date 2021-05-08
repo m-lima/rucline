@@ -1,13 +1,10 @@
 use super::{Buffer, Completer, Direction, Range, Scope, Suggester, Writer};
 
-use crate::Error;
-
 pub(super) struct Context<'c, 's, C, S>
 where
     C: Completer + ?Sized,
     S: Suggester + ?Sized,
 {
-    writer: Writer,
     buffer: Buffer,
     completer: Option<&'c C>,
     completion: Option<std::borrow::Cow<'c, str>>,
@@ -21,20 +18,17 @@ where
     S: Suggester + ?Sized,
 {
     pub(super) fn new(
-        erase_on_drop: bool,
-        prompt: Option<&str>,
         buffer: Option<Buffer>,
         completer: Option<&'c C>,
         suggester: Option<&'s S>,
-    ) -> Result<Self, Error> {
-        Ok(Self {
-            writer: Writer::new(erase_on_drop, prompt)?,
+    ) -> Self {
+        Self {
             buffer: buffer.unwrap_or_else(Buffer::new),
             completer,
             completion: None,
             suggester,
             suggestions: None,
-        })
+        }
     }
 
     pub(super) fn buffer_as_string(&mut self) -> String {
@@ -42,33 +36,42 @@ where
         self.buffer.to_string()
     }
 
-    pub(super) fn print(&mut self) -> Result<(), Error> {
-        self.writer.print(&self.buffer, self.completion.as_deref())
-    }
-
-    pub(super) fn write(&mut self, c: char) -> Result<(), Error> {
+    pub(super) fn write<W: Writer>(&mut self, c: char, writer: &mut W) -> Result<(), W::Error> {
         self.try_take_suggestion();
         self.buffer.write(c);
         self.update_completion();
-        self.writer.print(&self.buffer, self.completion.as_deref())
+        writer.print(&self.buffer, self.completion.as_deref())
     }
 
-    pub(super) fn delete(&mut self, scope: Scope) -> Result<(), Error> {
+    pub(super) fn delete<W: Writer>(
+        &mut self,
+        scope: Scope,
+        writer: &mut W,
+    ) -> Result<(), W::Error> {
         self.try_take_suggestion();
         self.buffer.delete(scope);
         self.update_completion();
-        self.writer.print(&self.buffer, self.completion.as_deref())
+        writer.print(&self.buffer, self.completion.as_deref())
     }
 
-    pub(super) fn move_cursor(&mut self, range: Range, direction: Direction) -> Result<(), Error> {
+    pub(super) fn move_cursor<W: Writer>(
+        &mut self,
+        range: Range,
+        direction: Direction,
+        writer: &mut W,
+    ) -> Result<(), W::Error> {
         self.try_take_suggestion();
         self.buffer.move_cursor(range, direction);
-        self.writer.print(&self.buffer, self.completion.as_deref())
+        writer.print(&self.buffer, self.completion.as_deref())
     }
 
     // Allowed because using map requires a `self` borrow
     #[allow(clippy::option_if_let_else)]
-    pub(super) fn complete(&mut self, range: Range) -> Result<(), Error> {
+    pub(super) fn complete<W: Writer>(
+        &mut self,
+        range: Range,
+        writer: &mut W,
+    ) -> Result<(), W::Error> {
         self.buffer.go_to_end();
         if let Some(completion) = &self.completion {
             if completion.is_empty() {
@@ -76,7 +79,7 @@ where
             } else {
                 self.buffer.write_range(&completion, range);
                 self.update_completion();
-                self.writer.print(&self.buffer, self.completion.as_deref())
+                writer.print(&self.buffer, self.completion.as_deref())
             }
         } else {
             Ok(())
@@ -89,37 +92,38 @@ where
         }
     }
 
-    pub(super) fn suggest(&mut self, direction: Direction) -> Result<(), Error> {
+    pub(super) fn suggest<W: Writer>(
+        &mut self,
+        direction: Direction,
+        writer: &mut W,
+    ) -> Result<(), W::Error> {
         if let Some(suggester) = &self.suggester {
             if let Some(suggestions) = &mut self.suggestions {
                 suggestions.cycle(direction);
                 if let Some(index) = suggestions.index {
-                    return self
-                        .writer
-                        .print_suggestions(index, suggestions.options.as_ref());
+                    return writer.print_suggestions(index, suggestions.options.as_ref());
                 }
             } else {
                 let options = suggester.suggest_for(self);
                 if !options.is_empty() {
                     self.suggestions = Some(Suggestions::new(options, direction));
                     let suggestions = self.suggestions.as_ref().unwrap();
-                    return self
-                        .writer
+                    return writer
                         .print_suggestions(suggestions.index.unwrap(), &suggestions.options);
                 }
             }
         }
 
-        self.writer.print(&self.buffer, self.completion.as_deref())
+        writer.print(&self.buffer, self.completion.as_deref())
     }
 
     pub(super) fn is_suggesting(&self) -> bool {
         self.suggestions.is_some()
     }
 
-    pub(super) fn cancel_suggestion(&mut self) -> Result<(), Error> {
+    pub(super) fn cancel_suggestion<W: Writer>(&mut self, writer: &mut W) -> Result<(), W::Error> {
         self.suggestions = None;
-        self.writer.print(&self.buffer, self.completion.as_deref())
+        writer.print(&self.buffer, self.completion.as_deref())
     }
 
     fn try_take_suggestion(&mut self) {
@@ -129,13 +133,13 @@ where
     }
 }
 
-impl<C, S> std::convert::Into<Buffer> for Context<'_, '_, C, S>
+impl<C, S> std::convert::From<Context<'_, '_, C, S>> for Buffer
 where
     C: Completer + ?Sized,
     S: Suggester + ?Sized,
 {
-    fn into(self) -> Buffer {
-        self.buffer
+    fn from(ctx: Context<'_, '_, C, S>) -> Buffer {
+        ctx.buffer
     }
 }
 

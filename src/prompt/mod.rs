@@ -158,27 +158,24 @@ where
     C: Completer + ?Sized,
     S: Suggester + ?Sized,
 {
-    let mut context = Context::new(
-        erase_after_read,
-        prompt.as_deref(),
-        buffer,
-        completer,
-        suggester,
-    )?;
+    let mut context = Context::new(buffer, completer, suggester);
+    let mut writer = writer::Crossterm::new(erase_after_read, prompt);
 
-    context.print()?;
+    writer.begin()?;
     loop {
         if let crossterm::event::Event::Key(e) = crossterm::event::read()? {
             match action_for(overrider, e, &context) {
-                Action::Write(c) => context.write(c)?,
-                Action::Delete(scope) => context.delete(scope)?,
-                Action::Move(range, direction) => context.move_cursor(range, direction)?,
-                Action::Complete(range) => context.complete(range)?,
-                Action::Suggest(direction) => context.suggest(direction)?,
+                Action::Write(c) => context.write(c, &mut writer)?,
+                Action::Delete(scope) => context.delete(scope, &mut writer)?,
+                Action::Move(range, direction) => {
+                    context.move_cursor(range, direction, &mut writer)?
+                }
+                Action::Complete(range) => context.complete(range, &mut writer)?,
+                Action::Suggest(direction) => context.suggest(direction, &mut writer)?,
                 Action::Noop => continue,
                 Action::Cancel => {
                     if context.is_suggesting() {
-                        context.cancel_suggestion()?;
+                        context.cancel_suggestion(&mut writer)?;
                     } else {
                         return Ok(Outcome::Canceled(context.into()));
                     }
