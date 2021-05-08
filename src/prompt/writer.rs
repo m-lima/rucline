@@ -20,6 +20,7 @@ pub trait Writer {
 
 // TODO: Keep track of lines
 // TODO: Deal with colors
+// TODO: Make this struct feature-based on crossterm
 pub(super) struct Crossterm<'a> {
     prompt: Option<&'a str>,
     erase_on_drop: bool,
