@@ -159,9 +159,9 @@ where
     S: Suggester + ?Sized,
 {
     let mut context = Context::new(buffer, completer, suggester);
-    let mut writer = writer::Crossterm::new(erase_after_read, prompt);
+    let mut writer = writer::crossterm::Crossterm::new(erase_after_read);
 
-    writer.begin()?;
+    writer.begin(prompt)?;
     loop {
         if let crossterm::event::Event::Key(e) = crossterm::event::read()? {
             match action_for(overrider, e, &context) {
