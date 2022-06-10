@@ -13,6 +13,9 @@ license = "MIT"
 [features]
 default = []
 config-serde = [ "dep:serde", "crossterm/serde" ]
+# For backwards compatibility
+# TODO: Remove
+serialize = [ "config-serde" ]
 
 [dependencies]
 crossterm = "0.18"
