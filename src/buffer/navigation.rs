@@ -105,10 +105,10 @@ mod test {
                     &uut,
                     &validator,
                     self.direction,
-                    &scenario,
-                    self.direction.start_for(&scenario),
+                    scenario,
+                    self.direction.start_for(scenario),
                     0,
-                )
+                );
             }
         }
     }

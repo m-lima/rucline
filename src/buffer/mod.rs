@@ -40,7 +40,7 @@ impl std::fmt::Display for InvalidIndex {
 ///
 /// [`action`]: actions/index.html
 /// [`completion`]: completions/index.html
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Default, Debug, Clone, Eq, PartialEq)]
 pub struct Buffer {
     string: String,
     cursor: usize,
@@ -154,11 +154,13 @@ impl Buffer {
                 self.write_str(string);
             }
             Range::Word => {
-                let index = navigation::next_word(0, &string);
+                let index = navigation::next_word(0, string);
                 self.write_str(&string[0..index]);
             }
             Range::Single => {
-                self.write(string.chars().next().unwrap());
+                if let Some(char) = string.chars().next() {
+                    self.write(char);
+                }
             }
         }
     }
@@ -272,15 +274,6 @@ impl Buffer {
     }
 }
 
-impl Default for Buffer {
-    fn default() -> Self {
-        Self {
-            string: String::new(),
-            cursor: 0,
-        }
-    }
-}
-
 impl<S> std::convert::From<S> for Buffer
 where
     S: AsRef<str>,
@@ -320,7 +313,7 @@ mod test {
     fn write() {
         scenarios(
             |buffer: &mut Buffer| buffer.write('x'),
-            Jig {
+            &Jig {
                 empty: "x_",
                 at_start: "x_abcd \t e  fghi  😀  jk😀lm  🇧🇷  no🇧🇷pq",
                 at_single_char: "abcd \t x_e  fghi  😀  jk😀lm  🇧🇷  no🇧🇷pq",
@@ -348,7 +341,7 @@ mod test {
     fn write_large_unicode_scalar_value() {
         scenarios(
             |buffer: &mut Buffer| buffer.write('😎'),
-            Jig {
+            &Jig {
                 empty: "😎_",
                 at_start: "😎_abcd \t e  fghi  😀  jk😀lm  🇧🇷  no🇧🇷pq",
                 at_single_char: "abcd \t 😎_e  fghi  😀  jk😀lm  🇧🇷  no🇧🇷pq",
@@ -376,7 +369,7 @@ mod test {
     fn partial_grapheme_cluster() {
         scenarios(
             |buffer: &mut Buffer| buffer.write('🈎'),
-            Jig {
+            &Jig {
                 empty: "🈎_",
                 at_start: "🈎_abcd \t e  fghi  😀  jk😀lm  🇧🇷  no🇧🇷pq",
                 at_single_char: "abcd \t 🈎_e  fghi  😀  jk😀lm  🇧🇷  no🇧🇷pq",
@@ -404,7 +397,7 @@ mod test {
     fn write_str() {
         scenarios(
             |buffer: &mut Buffer| buffer.write_str("xyz"),
-            Jig {
+            &Jig {
                 empty: "xyz_",
                 at_start: "xyz_abcd \t e  fghi  😀  jk😀lm  🇧🇷  no🇧🇷pq",
                 at_single_char: "abcd \t xyz_e  fghi  😀  jk😀lm  🇧🇷  no🇧🇷pq",
@@ -432,7 +425,7 @@ mod test {
     fn write_multiple_unicode_scalar_values() {
         scenarios(
             |buffer: &mut Buffer| buffer.write_str("🇳🇴"),
-            Jig {
+            &Jig {
                 empty: "🇳🇴_",
                 at_start: "🇳🇴_abcd \t e  fghi  😀  jk😀lm  🇧🇷  no🇧🇷pq",
                 at_single_char: "abcd \t 🇳🇴_e  fghi  😀  jk😀lm  🇧🇷  no🇧🇷pq",
@@ -460,9 +453,9 @@ mod test {
     fn delete_char_backward() {
         scenarios(
             |buffer: &mut Buffer| {
-                buffer.delete(Scope::Relative(Range::Single, Direction::Backward))
+                buffer.delete(Scope::Relative(Range::Single, Direction::Backward));
             },
-            Jig {
+            &Jig {
                 empty: "_",
                 at_start: "_abcd \t e  fghi  😀  jk😀lm  🇧🇷  no🇧🇷pq",
                 at_single_char: "abcd \t_e  fghi  😀  jk😀lm  🇧🇷  no🇧🇷pq",
@@ -490,7 +483,7 @@ mod test {
     fn delete_char_forward() {
         scenarios(
             |buffer: &mut Buffer| buffer.delete(Scope::Relative(Range::Single, Direction::Forward)),
-            Jig {
+            &Jig {
                 empty: "_",
                 at_start: "_bcd \t e  fghi  😀  jk😀lm  🇧🇷  no🇧🇷pq",
                 at_single_char: "abcd \t _  fghi  😀  jk😀lm  🇧🇷  no🇧🇷pq",
@@ -518,7 +511,7 @@ mod test {
     fn delete_word_backward() {
         scenarios(
             |buffer: &mut Buffer| buffer.delete(Scope::Relative(Range::Word, Direction::Backward)),
-            Jig {
+            &Jig {
                 empty: "_",
                 at_start: "_abcd \t e  fghi  😀  jk😀lm  🇧🇷  no🇧🇷pq",
                 at_single_char: "_e  fghi  😀  jk😀lm  🇧🇷  no🇧🇷pq",
@@ -546,7 +539,7 @@ mod test {
     fn delete_word_forward() {
         scenarios(
             |buffer: &mut Buffer| buffer.delete(Scope::Relative(Range::Word, Direction::Forward)),
-            Jig {
+            &Jig {
                 empty: "_",
                 at_start: "_e  fghi  😀  jk😀lm  🇧🇷  no🇧🇷pq",
                 at_single_char: "abcd \t _fghi  😀  jk😀lm  🇧🇷  no🇧🇷pq",
@@ -574,7 +567,7 @@ mod test {
     fn delete_line_backward() {
         scenarios(
             |buffer: &mut Buffer| buffer.delete(Scope::Relative(Range::Line, Direction::Backward)),
-            Jig {
+            &Jig {
                 empty: "_",
                 at_start: "_abcd \t e  fghi  😀  jk😀lm  🇧🇷  no🇧🇷pq",
                 at_single_char: "_e  fghi  😀  jk😀lm  🇧🇷  no🇧🇷pq",
@@ -602,7 +595,7 @@ mod test {
     fn delete_line_forward() {
         scenarios(
             |buffer: &mut Buffer| buffer.delete(Scope::Relative(Range::Line, Direction::Forward)),
-            Jig {
+            &Jig {
                 empty: "_",
                 at_start: "_",
                 at_single_char: "abcd \t _",
@@ -630,7 +623,7 @@ mod test {
     fn delete_whole_word() {
         scenarios(
             |buffer: &mut Buffer| buffer.delete(Scope::WholeWord),
-            Jig {
+            &Jig {
                 empty: "_",
                 at_start: "_e  fghi  😀  jk😀lm  🇧🇷  no🇧🇷pq",
                 at_single_char: "abcd _fghi  😀  jk😀lm  🇧🇷  no🇧🇷pq",
@@ -658,7 +651,7 @@ mod test {
     fn delete_whole_line() {
         scenarios(
             |buffer: &mut Buffer| buffer.delete(Scope::WholeLine),
-            Jig {
+            &Jig {
                 empty: "_",
                 at_start: "_",
                 at_single_char: "_",
@@ -709,13 +702,13 @@ mod test {
         string.replace('_', "")
     }
 
-    fn scenarios(action: impl Fn(&mut Buffer) + Copy, jig: Jig) {
+    fn scenarios(action: impl Fn(&mut Buffer) + Copy, jig: &Jig) {
         simple_positional_scenarios(action, jig);
         single_unicode_scalar_value_scenarios(action, jig);
         multiple_unicode_scalar_values_scenarios(action, jig);
     }
 
-    fn simple_positional_scenarios(action: impl Fn(&mut Buffer), jig: Jig) {
+    fn simple_positional_scenarios(action: impl Fn(&mut Buffer), jig: &Jig) {
         // Empty
         let mut buffer = Buffer::from("");
         action(&mut buffer);
@@ -779,7 +772,7 @@ mod test {
         assert_eq!(buffer.string, clean(jig.at_word_end), "at_word_end");
     }
 
-    fn single_unicode_scalar_value_scenarios(action: impl Fn(&mut Buffer), jig: Jig) {
+    fn single_unicode_scalar_value_scenarios(action: impl Fn(&mut Buffer), jig: &Jig) {
         // Before emoji
         let mut buffer = Buffer::from(TEST_STRING);
         buffer.cursor = TEST_STRING.find('😀').unwrap() - 1;
@@ -821,7 +814,7 @@ mod test {
         assert_eq!(buffer.string, clean(jig.past_emoji), "past_emoji");
     }
 
-    fn multiple_unicode_scalar_values_scenarios(action: impl Fn(&mut Buffer), jig: Jig) {
+    fn multiple_unicode_scalar_values_scenarios(action: impl Fn(&mut Buffer), jig: &Jig) {
         // Before multiple unicode scalar values
         let mut buffer = Buffer::from(TEST_STRING);
         buffer.cursor = TEST_STRING.find("🇧🇷").unwrap() - 1;

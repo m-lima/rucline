@@ -158,13 +158,7 @@ where
     C: Completer + ?Sized,
     S: Suggester + ?Sized,
 {
-    let mut context = Context::new(
-        erase_after_read,
-        prompt.as_deref(),
-        buffer,
-        completer,
-        suggester,
-    )?;
+    let mut context = Context::new(erase_after_read, prompt, buffer, completer, suggester)?;
 
     context.print()?;
     loop {

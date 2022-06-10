@@ -74,7 +74,7 @@ where
             if completion.is_empty() {
                 Ok(())
             } else {
-                self.buffer.write_range(&completion, range);
+                self.buffer.write_range(completion, range);
                 self.update_completion();
                 self.writer.print(&self.buffer, self.completion.as_deref())
             }
@@ -129,13 +129,13 @@ where
     }
 }
 
-impl<C, S> std::convert::Into<Buffer> for Context<'_, '_, C, S>
+impl<C, S> From<Context<'_, '_, C, S>> for Buffer
 where
     C: Completer + ?Sized,
     S: Suggester + ?Sized,
 {
-    fn into(self) -> Buffer {
-        self.buffer
+    fn from(ctx: Context<'_, '_, C, S>) -> Self {
+        ctx.buffer
     }
 }
 

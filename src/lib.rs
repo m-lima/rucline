@@ -86,6 +86,7 @@ pub mod prompt;
 
 pub use buffer::Buffer;
 pub use prompt::Outcome;
+pub use prompt::Prompt;
 
 pub use crossterm;
 

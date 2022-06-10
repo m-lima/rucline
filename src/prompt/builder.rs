@@ -168,6 +168,7 @@ pub trait Builder: ChainedLineReader + Sized {
     /// * [`buffer`] - A buffer to be used when displaying the prompt.
     ///
     /// [`buffer`]: ../buffer/struct.Buffer.html
+    #[must_use]
     fn buffer(self, buffer: Buffer) -> Self;
 
     /// Controls if the prompt shall be erased after user input.
@@ -181,6 +182,7 @@ pub trait Builder: ChainedLineReader + Sized {
     ///
     /// # Arguments
     /// * `erase_after_read` - Whether the prompt shall be erased after user input.
+    #[must_use]
     fn erase_after_read(self, erase_after_read: bool) -> Self;
 
     /// Modifies the behavior of the prompt by setting an [`Overrider`].
