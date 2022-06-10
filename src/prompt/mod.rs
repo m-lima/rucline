@@ -63,11 +63,11 @@ pub enum Outcome {
 impl Outcome {
     /// Returns true if the outcome was accepted.
     #[must_use]
-    pub fn was_acceoted(&self) -> bool {
+    pub fn was_accepted(&self) -> bool {
         matches!(self, Outcome::Accepted(_))
     }
 
-    /// Returns accepted text.
+    /// Returns the accepted text.
     ///
     /// # Panics
     ///
@@ -84,13 +84,14 @@ impl Outcome {
         }
     }
 
-    /// Converts this [`Outcome`] into an optional containing the accepted text.
+    /// Converts this [`Outcome`] into an [`Option`] of the accepted text.
     ///
     /// # Return
     /// * `Some(String)` - If the [`Outcome`] is [`accepted`].
     /// * `None` - If the [`Outcome`] is [`canceled`].
     ///
     /// [`Outcome`]: enum.Outcome.html
+    /// [`Option`]: std::option::Option
     /// [`accepted`]: enum.Outcome.html#variant.Accepted
     /// [`canceled`]: enum.Outcome.html#variant.Canceled
     #[must_use]
@@ -101,7 +102,7 @@ impl Outcome {
         }
     }
 
-    /// Converts this [`Outcome`] into a result containing the accepted text or the canceled buffer.
+    /// Converts this [`Outcome`] into a [`Result`] containing the accepted text or the canceled buffer.
     ///
     /// # Return
     /// * `Ok(String)` - If the [`Outcome`] is [`accepted`].
@@ -111,6 +112,7 @@ impl Outcome {
     /// * [`Buffer`] - If the user canceled the input.
     ///
     /// [`Outcome`]: enum.Outcome.html
+    /// [`Result`]: std::result::Result
     /// [`Buffer`]: ../buffer/struct.Buffer.html
     /// [`accepted`]: enum.Outcome.html#variant.Accepted
     /// [`canceled`]: enum.Outcome.html#variant.Canceled
@@ -129,7 +131,7 @@ impl Outcome {
 /// This method will block until an input is committed by the user.
 ///
 /// Calling this method directly can be cumbersome, therefore it is recommended to use the helper
-/// [`Prompt`] and [`Builder`] to craft the call.
+/// [`Prompt`] or [`Builder`] to craft the call.
 ///
 /// # Return
 /// * [`Outcome`] - Either [`Accepted`] containing the user input, or [`Canceled`]
