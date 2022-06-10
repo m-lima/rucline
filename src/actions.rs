@@ -62,7 +62,7 @@
 //!
 //! # Saving key binding configurations
 //!
-//! If the feature `serialize` is enabled, [`KeyBindings`] can be serialized, stored, and loaded
+//! If the feature `config-serde` is enabled, [`KeyBindings`] can be serialized, stored, and loaded
 //! at runtime.
 //!
 //! # Default behavior

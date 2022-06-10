@@ -45,7 +45,7 @@
 //! > See [`Action`] for the full default behavior specification
 //!
 //! The default behavior can be customized by overriding user [`events`] with [`actions`]. Which
-//! in turn can be serialized, stored, and loaded at run-time with the `serialize` feature flag.
+//! in turn can be serialized, stored, and loaded at run-time with the `config-serde` feature flag.
 //!
 //!
 //! ### Overriding key bindings
