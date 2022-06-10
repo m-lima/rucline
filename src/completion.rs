@@ -221,6 +221,10 @@ impl<S: AsRef<str>> Completer for [S] {
     impl_completion!(completer);
 }
 
+impl<S: AsRef<str>, const N: usize> Completer for [S; N] {
+    impl_completion!(completer);
+}
+
 impl<S: AsRef<str>> Completer for &[S] {
     impl_completion!(completer);
 }
@@ -229,7 +233,7 @@ impl<S: AsRef<str>> Suggester for Vec<S> {
     impl_completion!(suggester);
 }
 
-impl<S: AsRef<str>> Suggester for [S] {
+impl<S: AsRef<str>, const N: usize> Suggester for [S; N] {
     impl_completion!(suggester);
 }
 
