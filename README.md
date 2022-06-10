@@ -51,7 +51,7 @@ functionality and editing commands. For example, a few of the built-ins:
 > See [`Action`][`actions`] for the full default behavior specification
 
 The default behavior can be customized by overriding user [`events`] with [`actions`]. Which
-in turn can be serialized, stored, and loaded at run-time.
+in turn can be serialized, stored, and loaded at run-time with the `serialize` feature flag.
 
 
 #### Overriding key bindings

@@ -1,8 +1,8 @@
 [package]
 name = "rucline"
-version = "0.4.0"
+version = "0.4.1"
 authors = ["Marcelo Lima <marcelowind@gmail.com>"]
-edition = "2018"
+edition = "2021"
 readme = "README.md"
 keywords = ["cli", "repl", "terminal", "color"]
 repository = "https://github.com/m-lima/rucline"
