@@ -8,7 +8,7 @@
 > Code for demo above available at [examples/multiple.rs](../../blob/master/examples/multiple.rs)
 
 Rucline, the Rust CLI Line reader, or simply "recline", is a cross-platform, UTF-8 compatible
-line reader that provides hooks for autocompletion and tab suggestion. It supports advanced
+line reader that provides hooks for autocompletion and drop-down suggestion. It supports advanced
 editing [`actions`] and hooks for customizing the line reader behavior making it more flexible
 than simply reading from `stdin`.
 
