@@ -12,7 +12,7 @@ license = "MIT"
 
 [features]
 default = []
-serialize = [ "serde", "crossterm/serde" ]
+config-serde = [ "dep:serde", "crossterm/serde" ]
 
 [dependencies]
 crossterm = "0.18"
