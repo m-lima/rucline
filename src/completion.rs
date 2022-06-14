@@ -217,10 +217,6 @@ impl<S: AsRef<str>> Completer for Vec<S> {
     impl_completion!(completer);
 }
 
-impl<S: AsRef<str>> Completer for [S] {
-    impl_completion!(completer);
-}
-
 impl<S: AsRef<str>, const N: usize> Completer for [S; N] {
     impl_completion!(completer);
 }
