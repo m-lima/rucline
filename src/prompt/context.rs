@@ -13,6 +13,7 @@ where
     completion: Option<std::borrow::Cow<'c, str>>,
     suggester: Option<&'s S>,
     suggestions: Option<Suggestions<'s>>,
+    display_suggestion_options: bool
 }
 
 impl<'c, 's, C, S> Context<'c, 's, C, S>
@@ -22,6 +23,7 @@ where
 {
     pub(super) fn new(
         erase_on_drop: bool,
+        display_suggestion_options: bool,
         prompt: Option<&str>,
         buffer: Option<Buffer>,
         completer: Option<&'c C>,
@@ -34,6 +36,7 @@ where
             completion: None,
             suggester,
             suggestions: None,
+            display_suggestion_options
         })
     }
 
@@ -89,23 +92,40 @@ where
         }
     }
 
-    pub(super) fn suggest(&mut self, direction: Direction) -> Result<(), Error> {
+    pub(super) fn suggest(
+        &mut self,
+        direction: Direction,
+    ) -> Result<(), Error> {
         if let Some(suggester) = &self.suggester {
             if let Some(suggestions) = &mut self.suggestions {
                 suggestions.cycle(direction);
                 if let Some(index) = suggestions.index {
-                    return self
-                        .writer
-                        .print_suggestions(index, suggestions.options.as_ref());
+                    self.writer
+                        .print_selected_suggestion(index, suggestions.options.as_ref())?;
+
+                    if self.display_suggestion_options {
+                        self.writer
+                            .print_suggestion_options(index, suggestions.options.as_ref())?;
+                    }
+                    return Ok(())
                 }
             } else {
                 let options = suggester.suggest_for(self);
                 if !options.is_empty() {
                     self.suggestions = Some(Suggestions::new(options, direction));
                     let suggestions = self.suggestions.as_ref().unwrap();
-                    return self
-                        .writer
-                        .print_suggestions(suggestions.index.unwrap(), &suggestions.options);
+                    self.writer.print_selected_suggestion(
+                        suggestions.index.unwrap(),
+                        &suggestions.options,
+                    )?;
+
+                    if self.display_suggestion_options {
+                        self.writer.print_suggestion_options(
+                            suggestions.index.unwrap(),
+                            &suggestions.options,
+                        )?;
+                    }
+                    return Ok(())
                 }
             }
         }

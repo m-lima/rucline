@@ -151,6 +151,7 @@ pub fn read_line<O, C, S>(
     prompt: Option<&str>,
     buffer: Option<Buffer>,
     erase_after_read: bool,
+    display_suggestion_options: bool,
     overrider: Option<&O>,
     completer: Option<&C>,
     suggester: Option<&S>,
@@ -160,7 +161,14 @@ where
     C: Completer + ?Sized,
     S: Suggester + ?Sized,
 {
-    let mut context = Context::new(erase_after_read, prompt, buffer, completer, suggester)?;
+    let mut context = Context::new(
+        erase_after_read,
+        display_suggestion_options,
+        prompt,
+        buffer,
+        completer,
+        suggester,
+    )?;
 
     context.print()?;
     loop {

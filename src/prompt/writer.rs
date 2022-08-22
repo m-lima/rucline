@@ -63,7 +63,7 @@ impl Writer {
         crossterm::execute!(&mut stdout)
     }
 
-    pub(super) fn print_suggestions(
+    pub(super) fn print_selected_suggestion(
         &mut self,
         selected_index: usize,
         suggestions: &[std::borrow::Cow<'_, str>],
@@ -79,6 +79,32 @@ impl Writer {
         crossterm::queue!(stdout, crossterm::style::Print(buffer))?;
         self.cursor_offset = 0;
         self.printed_length = buffer.graphemes(true).count();
+
+        // Save position at the end of the buffer
+        // TODO: avoid this save and the later restore
+        let end_of_buffer = crossterm::cursor::position().map(|pos| pos.0)?;
+
+        // Restore cursor
+        let bottom_of_buffer = crossterm::cursor::position().map(|pos| pos.1)?;
+        crossterm::queue!(
+            stdout,
+            crossterm::cursor::MoveTo(end_of_buffer, bottom_of_buffer)
+        )?;
+        rewind_cursor(&mut stdout, self.cursor_offset)?;
+
+        // Execute
+        crossterm::execute!(stdout)
+    }
+
+    pub(super) fn print_suggestion_options(
+        &mut self,
+        selected_index: usize,
+        suggestions: &[std::borrow::Cow<'_, str>],
+    ) -> Result<(), Error> {
+        use std::io::Write;
+        use unicode_segmentation::UnicodeSegmentation;
+
+        let mut stdout = std::io::stdout();
 
         // Save position at the end of the buffer
         // TODO: avoid this save and the later restore
