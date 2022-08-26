@@ -13,7 +13,7 @@ where
     completion: Option<std::borrow::Cow<'c, str>>,
     suggester: Option<&'s S>,
     suggestions: Option<Suggestions<'s>>,
-    display_suggestion_options: bool
+    display_suggestion_options: bool,
 }
 
 impl<'c, 's, C, S> Context<'c, 's, C, S>
@@ -36,7 +36,7 @@ where
             completion: None,
             suggester,
             suggestions: None,
-            display_suggestion_options
+            display_suggestion_options,
         })
     }
 
@@ -92,10 +92,7 @@ where
         }
     }
 
-    pub(super) fn suggest(
-        &mut self,
-        direction: Direction,
-    ) -> Result<(), Error> {
+    pub(super) fn suggest(&mut self, direction: Direction) -> Result<(), Error> {
         if let Some(suggester) = &self.suggester {
             if let Some(suggestions) = &mut self.suggestions {
                 suggestions.cycle(direction);
@@ -107,7 +104,7 @@ where
                         self.writer
                             .print_suggestion_options(index, suggestions.options.as_ref())?;
                     }
-                    return Ok(())
+                    return Ok(());
                 }
             } else {
                 let options = suggester.suggest_for(self);
@@ -125,7 +122,7 @@ where
                             &suggestions.options,
                         )?;
                     }
-                    return Ok(())
+                    return Ok(());
                 }
             }
         }

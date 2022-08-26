@@ -18,7 +18,9 @@ macro_rules! impl_builder {
         }
 
         fn display_suggestion_options(mut self, display_suggestion_options: bool) -> Self {
-            self.base = self.base.display_suggestion_options(display_suggestion_options);
+            self.base = self
+                .base
+                .display_suggestion_options(display_suggestion_options);
             self
         }
     };
