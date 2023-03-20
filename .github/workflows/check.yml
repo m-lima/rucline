@@ -1,0 +1,90 @@
+name: Check
+
+permissions:
+  contents: read
+
+on: [push, pull_request]
+
+jobs:
+  main:
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Prepare
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Format
+        run: cargo fmt --all -- --check
+
+      - name: Check
+        run: cargo check --verbose --workspace --all-targets --all-features
+
+      - name: Lint
+        permissions:
+          contents: read
+          checks: write
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --verbose --workspace --all-targets --all-features
+
+      - name: Test
+        run: cargo test --verbose --workspace --all-targets --all-features --no-fail-fast -- --nocapture
+
+  features:
+    name: Check features
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Prepare
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install hack
+        uses: taiki-e/install-action@cargo-hack
+
+      - name: Cargo hack
+        run: cargo hack --feature-powerset check --lib --tests
+
+  examples:
+    name: Check examples
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Prepare
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Check
+        run: cargo check --verbose --workspace --examples
+
+      - name: Lint
+        permissions:
+          contents: read
+          checks: write
+        uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --verbose --workspace --examples
+
+  docs:
+    name: Check docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Prepare nightly
+        uses: dtolnay/rust-toolchain@nightly
+
+      - name: Cargo doc
+        run: cargo doc --no-deps --all-features

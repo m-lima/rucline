@@ -1,15 +1,26 @@
-name: audit
+name: Audit
+
+permissions:
+  contents: read
+
 on:
   push:
     paths:
       - '**/Cargo.toml'
+    branches:
+      - '**'
 
 jobs:
   audit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - name: Checkout
+        uses: actions/checkout@v3
+
       - name: Audit
         uses: actions-rs/audit-check@v1
+        permissions:
+          contents: read
+          checks: write
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
