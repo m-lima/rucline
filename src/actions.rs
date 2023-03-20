@@ -50,14 +50,14 @@
 //!
 //! # Disabling a default action
 //!
-//! To explicitly remove an [`Action`] from the default behavior, the [`Noop`] action can be
+//! To explicitly remove an [`Action`] from the default behavior, the [`NoOp`] action can be
 //! set as the override.
 //!
 //! ```
 //! use rucline::actions::{Action, Event, KeyBindings, KeyCode};
 //!
 //! let mut bindings = KeyBindings::new();
-//! bindings.insert(Event::from(KeyCode::Tab), Action::Noop);
+//! bindings.insert(Event::from(KeyCode::Tab), Action::NoOp);
 //! ```
 //!
 //! # Saving key binding configurations
@@ -101,19 +101,19 @@
 //!             'l' => Delete(Relative(Line, Forward)),
 //!             'w' => Delete(WholeWord),
 //!             'u' => Delete(WholeLine),
-//!             _ => Noop,
+//!             _ => NoOp,
 //!         }
 //!     } else if event.modifiers == crossterm::event::KeyModifiers::ALT {
 //!         match c {
 //!             'b' => Move(Word, Backward),
 //!             'f' => Move(Word, Forward),
-//!             _ => Noop,
+//!             _ => NoOp,
 //!         }
 //!     } else {
 //!         Write(c)
 //!     }
 //! }
-//! _ => Noop,
+//! _ => NoOp,
 //! # }}
 //! ```
 //!
@@ -122,7 +122,7 @@
 //! [`Action`]: enum.Action.html
 //! [`Event`]: type.Event.html
 //! [`KeyBindings`]: type.KeyBindings.html
-//! [`Noop`]: enum.Action.html#variant.Noop
+//! [`NoOp`]: enum.Action.html#variant.NoOp
 //! [`Suggest`]: enum.Action.html#variant.Suggest
 //! [`prompt`]: ../prompt/index.html
 //! [`Buffer`]: ../buffer/struct.Buffer.html
@@ -161,7 +161,7 @@ pub enum Action {
     /// Cancel the suggestions, if any. Else, discard the whole line
     Cancel,
     /// Do nothing and wait for the next [`Event`](type.Event.html)
-    Noop,
+    NoOp,
 }
 
 /// The scope an [`Action`](enum.Action.html) should be applied on
@@ -284,7 +284,7 @@ fn complete_if_at_end_else_move(buffer: &Buffer, range: Range) -> Action {
 }
 
 fn default_action(event: Event, buffer: &Buffer) -> Action {
-    use Action::{Accept, Cancel, Delete, Move, Noop, Suggest, Write};
+    use Action::{Accept, Cancel, Delete, Move, NoOp, Suggest, Write};
     use Direction::{Backward, Forward};
     use Range::{Line, Single, Word};
     use Scope::{Relative, WholeLine, WholeWord};
@@ -317,19 +317,19 @@ fn default_action(event: Event, buffer: &Buffer) -> Action {
                     'l' => Delete(Relative(Line, Forward)),
                     'w' => Delete(WholeWord),
                     'u' => Delete(WholeLine),
-                    _ => Noop,
+                    _ => NoOp,
                 }
             } else if alt_pressed(&event) {
                 match c {
                     'b' => Move(Word, Backward),
                     'f' => complete_if_at_end_else_move(buffer, Word),
-                    _ => Noop,
+                    _ => NoOp,
                 }
             } else {
                 Write(c)
             }
         }
-        _ => Noop,
+        _ => NoOp,
     }
 }
 

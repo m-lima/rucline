@@ -179,7 +179,7 @@ where
                 Action::Move(range, direction) => context.move_cursor(range, direction)?,
                 Action::Complete(range) => context.complete(range)?,
                 Action::Suggest(direction) => context.suggest(direction)?,
-                Action::Noop => continue,
+                Action::NoOp => continue,
                 Action::Cancel => {
                     if context.is_suggesting() {
                         context.cancel_suggestion()?;
