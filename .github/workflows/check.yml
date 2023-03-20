@@ -6,8 +6,30 @@ permissions:
 on: [push, pull_request]
 
 jobs:
-  main:
+  check:
     name: Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Prepare
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install hack
+        uses: taiki-e/install-action@cargo-hack
+
+      - name: Check main
+        run: cargo hack --feature-powerset --workspace --verbose --keep-going check
+
+      - name: Check examples
+        run: cargo hack --feature-powerset --workspace --verbose --keep-going --examples check
+
+      - name: Check tests
+        run: cargo hack --feature-powerset --workspace --verbose --keep-going --tests check
+
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -21,51 +43,23 @@ jobs:
       - name: Format
         run: cargo fmt --all -- --check
 
-      - name: Check
-        run: cargo check --verbose --workspace --all-targets --all-features
-
-      - name: Lint
+      - name: Lint main
         permissions:
           contents: read
           checks: write
         uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --verbose --workspace --all-targets --all-features
+          args: --verbose --workspace --all-features
 
-      - name: Test
-        run: cargo test --verbose --workspace --all-targets --all-features --no-fail-fast -- --nocapture
-
-  features:
-    name: Check features
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Prepare
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install hack
-        uses: taiki-e/install-action@cargo-hack
-
-      - name: Cargo hack
-        run: cargo hack --feature-powerset check --lib --tests
-
-  examples:
-    name: Check examples
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Prepare
-        uses: dtolnay/rust-toolchain@stable
+      - name: Lint tests
+        permissions:
+          contents: read
+          checks: write
+        uses: actions-rs/clippy-check@v1
         with:
-          components: clippy
-
-      - name: Check
-        run: cargo check --verbose --workspace --examples
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --verbose --workspace --all-features --tests
 
       - name: Lint
         permissions:
@@ -75,6 +69,19 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --verbose --workspace --examples
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Prepare
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Test
+        run: cargo test --verbose --workspace --all-features --no-fail-fast -- --nocapture
 
   docs:
     name: Check docs
