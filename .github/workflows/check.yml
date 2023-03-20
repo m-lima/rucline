@@ -33,9 +33,12 @@ jobs:
       - name: Check tests
         run: cargo hack --feature-powerset --workspace --verbose --keep-going --tests check
 
-  lint:
-    name: Lint
+  clippy:
+    name: Clippy
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -45,28 +48,19 @@ jobs:
         with:
           components: clippy
 
-      - name: Lint main
-        permissions:
-          contents: read
-          checks: write
+      - name: Clippy main
         uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --verbose --workspace --all-features
 
-      - name: Lint tests
-        permissions:
-          contents: read
-          checks: write
+      - name: Clippy tests
         uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --verbose --workspace --all-features --tests
 
-      - name: Lint
-        permissions:
-          contents: read
-          checks: write
+      - name: Clippy examples
         uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
