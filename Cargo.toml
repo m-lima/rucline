@@ -19,12 +19,12 @@ serialize = [ "config-serde" ]
 
 [dependencies]
 crossterm = "0.26.1"
-serde = { version = "1", features = [ "derive" ], optional = true }
-unicode-segmentation = "1"
+serde = { version = "1.0.158", features = [ "derive" ], optional = true }
+unicode-segmentation = "1.10.1"
 
 [dev-dependencies]
-pwner = "0.1"
-quit = "1"
+pwner = "0.1.8"
+quit = "2.0.0"
 
 [package.metadata.docs.rs]
 all-features = true
