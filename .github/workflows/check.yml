@@ -25,13 +25,13 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Check main
-        run: cargo hack --feature-powerset --workspace --verbose --keep-going check
+        run: cargo hack --feature-powerset --keep-going check --verbose --workspace
 
       - name: Check examples
-        run: cargo hack --feature-powerset --workspace --verbose --keep-going --examples check
+        run: cargo hack --feature-powerset --keep-going check --verbose --workspace --examples
 
       - name: Check tests
-        run: cargo hack --feature-powerset --workspace --verbose --keep-going --tests check
+        run: cargo hack --feature-powerset --keep-going check --verbose --workspace --tests
 
   clippy:
     name: Clippy
@@ -80,7 +80,7 @@ jobs:
         uses: taiki-e/install-action@cargo-hack
 
       - name: Test
-        run: cargo hack --feature-powerset test --verbose --workspace --all-features --no-fail-fast -- --nocapture
+        run: cargo hack --feature-powerset --keep-going test --verbose --workspace --no-fail-fast -- --nocapture
 
   docs:
     name: Check docs
