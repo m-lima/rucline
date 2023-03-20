@@ -1,6 +1,6 @@
 use crossterm::event::KeyCode;
+use crossterm::style::Stylize;
 use rucline::actions::{Action, Event, KeyBindings, Range};
-use rucline::crossterm::style::Styler;
 use rucline::prompt::{Builder, Prompt};
 use rucline::Outcome::Accepted;
 
@@ -22,6 +22,6 @@ fn main() {
         //Block until value is ready
         .read_line()
     {
-        println!("'{}' seems to be your favorite website", string);
+        println!("'{string}' seems to be your favorite website");
     }
 }

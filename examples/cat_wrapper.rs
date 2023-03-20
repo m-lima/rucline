@@ -1,8 +1,8 @@
 #![cfg(unix)]
-use rucline::crossterm::style::Colorize;
 use rucline::prompt::{Builder, Prompt};
 use rucline::Outcome::Accepted;
 
+use crossterm::style::Stylize;
 use pwner::Spawner;
 use std::io::{Read, Write};
 use std::process::Command;
@@ -34,7 +34,7 @@ fn main() {
         // Read from cat and print
         let bytes = cat.read(&mut buffer).expect("Could not read from 'cat'");
         if let Ok(string) = std::str::from_utf8(&buffer[..bytes - 1]) {
-            println!("{}", string);
+            println!("{string}");
         }
     }
 }

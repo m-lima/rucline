@@ -772,7 +772,7 @@ mod test {
 
     #[test]
     fn accept_decorated_prompt() {
-        use crossterm::style::Colorize;
+        use crossterm::style::Stylize;
 
         let mut prompt = Prompt::from("My prompt".green());
 

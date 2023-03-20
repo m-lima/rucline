@@ -1,4 +1,4 @@
-use rucline::crossterm::style::Colorize;
+use crossterm::style::Stylize;
 use rucline::prompt::{Builder, Prompt};
 use rucline::{Buffer, Outcome};
 
@@ -41,7 +41,7 @@ fn main() {
                 match outcome {
                     Outcome::Accepted(mode) => {
                         // We will do as commanded
-                        println!("Ok! Will {} {}", command, mode);
+                        println!("Ok! Will {command} {mode}");
                         break;
                     }
                     Outcome::Canceled(_) => {

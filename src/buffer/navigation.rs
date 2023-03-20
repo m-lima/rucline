@@ -143,10 +143,7 @@ mod test {
 
         assert!(
             validator(pivot, scenario),
-            "failed on iteration {} at index {} for \"{}\"",
-            iteration,
-            pivot,
-            scenario
+            "failed on iteration {iteration} at index {pivot} for \"{scenario}\"",
         );
         test_scenario(uut, validator, direction, scenario, pivot, iteration + 1);
     }

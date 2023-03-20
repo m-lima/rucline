@@ -18,7 +18,7 @@ config-serde = [ "dep:serde", "crossterm/serde" ]
 serialize = [ "config-serde" ]
 
 [dependencies]
-crossterm = "0.18"
+crossterm = "0.26.1"
 serde = { version = "1", features = [ "derive" ], optional = true }
 unicode-segmentation = "1"
 

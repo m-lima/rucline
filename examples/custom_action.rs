@@ -1,6 +1,6 @@
+use crossterm::event::{KeyCode, KeyModifiers};
+use crossterm::style::Stylize;
 use rucline::actions::{Action, Event, Overrider};
-use rucline::crossterm::event::{KeyCode, KeyModifiers};
-use rucline::crossterm::style::Colorize;
 use rucline::prompt::{Builder, Prompt};
 use rucline::Buffer;
 use rucline::Outcome::Accepted;
@@ -58,7 +58,7 @@ fn main() {
             .read_line()
             {
                 // We will do as commanded
-                println!("Ok! Will {} {}", command, mode);
+                println!("Ok! Will {command} {mode}");
             }
         } else {
             // Command not recognized
