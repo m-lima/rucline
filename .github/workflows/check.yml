@@ -15,9 +15,14 @@ jobs:
 
       - name: Prepare
         uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
 
       - name: Install hack
         uses: taiki-e/install-action@cargo-hack
+
+      - name: Format
+        run: cargo fmt --all -- --check
 
       - name: Check main
         run: cargo hack --feature-powerset --workspace --verbose --keep-going check
@@ -38,10 +43,7 @@ jobs:
       - name: Prepare
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: clippy, rustfmt
-
-      - name: Format
-        run: cargo fmt --all -- --check
+          components: clippy
 
       - name: Lint main
         permissions:
@@ -80,8 +82,11 @@ jobs:
       - name: Prepare
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Install hack
+        uses: taiki-e/install-action@cargo-hack
+
       - name: Test
-        run: cargo test --verbose --workspace --all-features --no-fail-fast -- --nocapture
+        run: cargo hack --feature-powerset test --verbose --workspace --all-features --no-fail-fast -- --nocapture
 
   docs:
     name: Check docs
